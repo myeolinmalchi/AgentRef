@@ -1,11 +1,14 @@
 # AgentState
 
-AgentState is a small Python library for keeping large data-plane values out of
-LLM agent framework checkpoints. It gives state fields two explicit roles:
+Agent checkpoints should not have to carry your entire data plane.
+
+AgentState externalizes large workflow state into content-addressed storage
+while keeping only compact references in LangGraph, LlamaIndex, AutoGen, and
+Deep Agents-style checkpoints. It gives state fields two explicit roles:
 
 - `Inline[T]`: control-plane values stored directly in framework state
-- `Externalized[T]`: data-plane values stored in content-addressed storage while
-  the checkpoint keeps only a `ContentRef`
+- `Externalized[T]`: large values stored externally; checkpoints keep only a
+  `ContentRef`
 
 The goal is to make checkpoint write amplification hard to represent in user
 code. Assigning an `Externalized` field stores the serialized payload in CAS and
