@@ -6,7 +6,7 @@ AgentState externalizes large workflow state into content-addressed storage
 while keeping only compact references in LangGraph, LlamaIndex, AutoGen, and
 Deep Agents-style checkpoints. It gives state fields two explicit roles:
 
-- `Inline[T]`: control-plane values stored directly in framework state
+- `Inline[T]`: small control state kept directly in checkpoints
 - `Externalized[T]`: large values stored externally; checkpoints keep only a
   `ContentRef`
 
@@ -56,7 +56,7 @@ pip install "agentstate[all]"
 
 ## Usage
 
-### Core State Model
+### Declare State
 
 ```python
 from agentstate import AgentState, Externalized, Inline, configure
@@ -94,33 +94,31 @@ assert state.retrieved_docs == [{"id": "doc-1", "text": "..."}]
 ```python
 from langgraph.graph import StateGraph
 
-from agentstate import AgentState, Externalized, Framework, Inline
-from agentstate.adapters import auto_adapt
+from agentstate import AgentState, Externalized, Inline
 from agentstate.adapters.langgraph import LangGraphAdapter
 
 
 class RAGState(AgentState):
     question: Inline[str]
     docs: Externalized[list[dict]]
+    answer: Inline[str]
 
 
-StateSchema = auto_adapt(RAGState, Framework.LANGGRAPH)
-adapter = LangGraphAdapter()
+adapter = LangGraphAdapter(RAGState)
 
 
 def retrieve(state):
     docs = [{"id": "doc-1", "text": "large retrieved text"}]
-    return adapter.externalize_node_update(RAGState, {"docs": docs})
+    return {"docs": docs}
 
 
 def answer(state):
-    hydrated = adapter.hydrate_state_for_node(RAGState, state)
-    return {"question": hydrated["question"]}
+    return {"answer": f"Read {len(state['docs'])} document(s)."}
 
 
-graph = StateGraph(StateSchema)
-graph.add_node("retrieve", retrieve)
-graph.add_node("answer", answer)
+graph = StateGraph(adapter.schema())
+graph.add_node("retrieve", adapter.wrap_node(retrieve))
+graph.add_node("answer", adapter.wrap_node(answer))
 ```
 
 ### LlamaIndex Workflow
@@ -135,17 +133,18 @@ class WorkflowState(AgentState):
     docs: Externalized[list[dict]]
 
 
-adapter = LlamaIndexAdapter()
+adapter = LlamaIndexAdapter(WorkflowState)
 
 
 async def retrieve_step(ctx):
-    store = adapter.context_store(WorkflowState, ctx.store)
-    store["current_step"] = "retrieve"
-    store["docs"] = [{"id": "doc-1", "text": "large retrieved text"}]
+    store = adapter.context_store(ctx.store)
+    await store.set("current_step", "retrieve")
+    await store.set("docs", [{"id": "doc-1", "text": "large retrieved text"}])
 ```
 
-`store["docs"]` hydrates on read, while `store.to_checkpoint_dict()` keeps only
-`ContentRef` values for externalized fields.
+`await store.get("docs")` hydrates on read, while
+`await store.to_checkpoint_dict()` keeps only `ContentRef` values for
+externalized fields.
 
 ### AutoGen
 
