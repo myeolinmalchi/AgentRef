@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a reproducible problem in AgentState.
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+      placeholder: Describe the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide a minimal reproduction or workflow steps.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: agentstate-version
+    attributes:
+      label: AgentState version
+      placeholder: 0.1.0
+  - type: input
+    id: framework
+    attributes:
+      label: Framework and version
+      placeholder: LangGraph 0.x, LlamaIndex, AutoGen, Deep Agents
+  - type: input
+    id: backend
+    attributes:
+      label: Backend
+      placeholder: InMemoryCAS, FilesystemCAS, PostgresCAS
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      render: text

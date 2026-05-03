@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a capability, integration, or API improvement.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow or limitation should this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should AgentState add or change?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or designs did you consider?
+  - type: input
+    id: framework
+    attributes:
+      label: Related framework
+      placeholder: LangGraph, LlamaIndex, AutoGen, Deep Agents, other
+  - type: input
+    id: backend
+    attributes:
+      label: Related backend
+      placeholder: InMemoryCAS, FilesystemCAS, PostgresCAS, other
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected impact
+      description: How would this affect memory, latency, storage, or usability?
