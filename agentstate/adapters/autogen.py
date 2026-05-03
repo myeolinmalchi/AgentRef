@@ -11,7 +11,6 @@ from __future__ import annotations
 import pickle
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, cast
 
-from agentstate.config import get_config
 from agentstate.adapters.base import BaseFrameworkAdapter, reducer_for_field
 from agentstate.core.reference import ContentRef
 from agentstate.core.state import AgentState
@@ -94,7 +93,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
                 if key not in next_message:
                     continue
                 value = next_message[key]
-                payload = get_config().backend.serialize(value)
+                payload = self.backend.serialize(value)
                 if len(payload) <= threshold_bytes:
                     continue
                 ref = self._to_content_ref(value)
@@ -120,7 +119,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
                     continue
                 wrapper = cast(Dict[str, Dict[str, Any]], value)
                 ref = ContentRef.from_dict(wrapper["agentstate_ref"])
-                next_message[key] = ref.resolve(get_config().backend)
+                next_message[key] = ref.resolve(self.backend)
             hydrated.append(next_message)
         return hydrated
 

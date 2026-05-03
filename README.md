@@ -51,6 +51,7 @@ Optional framework integrations are split by extra:
 pip install "agentstate[langgraph]"
 pip install "agentstate[llamaindex]"
 pip install "agentstate[autogen]"
+pip install "agentstate[postgres]"
 pip install "agentstate[all]"
 ```
 
@@ -59,8 +60,7 @@ pip install "agentstate[all]"
 ### Declare State
 
 ```python
-from agentstate import AgentState, Externalized, Inline, configure
-from agentstate.storage import FilesystemCAS
+from agentstate import AgentState, Externalized, Inline
 
 
 class ResearchState(AgentState):
@@ -69,24 +69,6 @@ class ResearchState(AgentState):
     citations: Inline[list[str]]
     retrieved_docs: Externalized[list[dict]]
     raw_html: Externalized[str]
-
-
-configure(
-    backend=FilesystemCAS(root="./state_blobs"),
-    inline_threshold_bytes=64 * 1024,
-)
-
-state = ResearchState(
-    current_step="retrieve",
-    iteration=1,
-    citations=[],
-    retrieved_docs=[{"id": "doc-1", "text": "..."}],
-    raw_html="<html>...</html>",
-)
-
-checkpoint = state.to_checkpoint_dict()
-assert checkpoint["retrieved_docs"].__class__.__name__ == "ContentRef"
-assert state.retrieved_docs == [{"id": "doc-1", "text": "..."}]
 ```
 
 ### LangGraph
@@ -96,6 +78,7 @@ from langgraph.graph import StateGraph
 
 from agentstate import AgentState, Externalized, Inline
 from agentstate.adapters.langgraph import LangGraphAdapter
+from agentstate.storage import FilesystemCAS
 
 
 class RAGState(AgentState):
@@ -104,7 +87,11 @@ class RAGState(AgentState):
     answer: Inline[str]
 
 
-adapter = LangGraphAdapter(RAGState)
+adapter = LangGraphAdapter(
+    RAGState,
+    backend=FilesystemCAS("./state_blobs"),
+    inline_threshold_bytes=64 * 1024,
+)
 
 
 def retrieve(state):
@@ -126,6 +113,7 @@ graph.add_node("answer", adapter.wrap_node(answer))
 ```python
 from agentstate import AgentState, Externalized, Inline
 from agentstate.adapters.llamaindex import LlamaIndexAdapter
+from agentstate.storage import FilesystemCAS
 
 
 class WorkflowState(AgentState):
@@ -133,7 +121,10 @@ class WorkflowState(AgentState):
     docs: Externalized[list[dict]]
 
 
-adapter = LlamaIndexAdapter(WorkflowState)
+adapter = LlamaIndexAdapter(
+    WorkflowState,
+    backend=FilesystemCAS("./state_blobs"),
+)
 
 
 async def retrieve_step(ctx):
@@ -154,8 +145,9 @@ payloads instead of monkeypatching Agent classes.
 
 ```python
 from agentstate.adapters.autogen import AutoGenAdapter
+from agentstate.storage import FilesystemCAS
 
-adapter = AutoGenAdapter()
+adapter = AutoGenAdapter(backend=FilesystemCAS("./state_blobs"))
 
 history = adapter.externalize_message_history(
     [{"role": "worker", "tool_result": "large tool output"}],
@@ -166,6 +158,57 @@ hydrated = adapter.hydrate_message_history(history)
 ```
 
 See `docs/autogen_limitations.md` for the integration boundary.
+
+### Storage Backends
+
+Use `FilesystemCAS` for local runs, benchmarks, and run-scoped temporary
+storage. Use `PostgresCAS` when checkpoints need persistent storage, TTL
+metadata, or operational cleanup.
+
+| Backend | Best for | Lifetime model | Cleanup | Notes |
+| --- | --- | --- | --- | --- |
+| `InMemoryCAS` | tests and ephemeral demos | process lifetime | process exit | fastest option, not durable |
+| `FilesystemCAS` | local runs, benchmarks, run-scoped workflows | directory lifetime | delete the run directory or migrate/prune by hash | simple durable storage, no built-in TTL |
+| `PostgresCAS` | production, persistent checkpoints, multi-worker apps | database-managed lifetime | `expires_at` plus `prune_expired()` | TTL metadata, operational visibility, migration aliases |
+
+All backends are passed directly to adapters:
+
+```python
+from agentstate.adapters.langgraph import LangGraphAdapter
+from agentstate.storage import FilesystemCAS, InMemoryCAS, PostgresCAS
+
+memory_adapter = LangGraphAdapter(RAGState, backend=InMemoryCAS())
+local_adapter = LangGraphAdapter(RAGState, backend=FilesystemCAS("./state_blobs"))
+postgres_adapter = LangGraphAdapter(
+    RAGState,
+    backend=PostgresCAS(
+        dsn="postgresql://user:pass@localhost:5432/app",
+        backend_id="postgres:agentstate",
+        default_ttl_seconds=7 * 24 * 3600,
+    ),
+)
+```
+
+`PostgresCAS` stores `created_at`, `last_accessed_at`, and `expires_at`
+metadata. Expired payloads are removed explicitly with `backend.prune_expired()`;
+AgentState does not delete referenced objects automatically.
+
+Existing filesystem payloads can be copied into Postgres without rewriting old
+checkpoints by configuring the Postgres backend with the old backend id as an
+alias:
+
+```python
+from agentstate.storage import FilesystemCAS, PostgresCAS, migrate_cas
+
+old = FilesystemCAS("./state_blobs")
+new = PostgresCAS(
+    dsn="postgresql://user:pass@localhost:5432/app",
+    backend_id="postgres:agentstate",
+    backend_aliases=[old.backend_id],
+)
+
+migrate_cas(old, new)
+```
 
 ## Invariants
 

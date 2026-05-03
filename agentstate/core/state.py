@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, Mapping, Type, TypeVar, get_type_hints
+from typing import Any, ClassVar, Dict, Mapping, Optional, Type, TypeVar, get_type_hints
 
+from agentstate.config import AgentStateRuntime
 from agentstate.core.descriptors import ExternalizedDescriptor, InlineDescriptor
 from agentstate.core.reference import ContentRef
 from agentstate.core.types import (
@@ -88,11 +89,17 @@ class AgentState(metaclass=AgentStateMeta):
 
     __agentstate_fields__: ClassVar[Dict[str, StateField]]
     _data: Dict[str, Any]
+    _agentstate_runtime: Optional[AgentStateRuntime]
 
-    def __init__(self, **values: Any) -> None:
+    def __init__(
+        self,
+        _runtime: Optional[AgentStateRuntime] = None,
+        **values: Any,
+    ) -> None:
         """Initialize state fields from keyword arguments."""
 
         self._data = {}
+        self._agentstate_runtime = _runtime
         self._assign_initial_values(values)
 
     @classmethod
@@ -166,10 +173,15 @@ class AgentState(metaclass=AgentStateMeta):
         raise AgentStateError(f"Unsupported framework: {selected!r}")
 
     @classmethod
-    def from_checkpoint_dict(cls: Type[StateT], state: Mapping[str, Any]) -> StateT:
+    def from_checkpoint_dict(
+        cls: Type[StateT],
+        state: Mapping[str, Any],
+        *,
+        runtime: Optional[AgentStateRuntime] = None,
+    ) -> StateT:
         """Restore an instance from a checkpoint-safe mapping."""
 
-        instance = cls()
+        instance = cls(_runtime=runtime)
         unknown = set(state) - set(cls.__agentstate_fields__)
         if unknown:
             raise AgentStateError(
@@ -185,24 +197,37 @@ class AgentState(metaclass=AgentStateMeta):
         return instance
 
     @classmethod
-    def from_langgraph_state(cls: Type[StateT], state: Mapping[str, Any]) -> StateT:
+    def from_langgraph_state(
+        cls: Type[StateT],
+        state: Mapping[str, Any],
+        *,
+        runtime: Optional[AgentStateRuntime] = None,
+    ) -> StateT:
         """Restore from a LangGraph state mapping."""
 
-        return cls.from_checkpoint_dict(state)
+        return cls.from_checkpoint_dict(state, runtime=runtime)
 
     @classmethod
     def from_llamaindex_context_dict(
-        cls: Type[StateT], state: Mapping[str, Any]
+        cls: Type[StateT],
+        state: Mapping[str, Any],
+        *,
+        runtime: Optional[AgentStateRuntime] = None,
     ) -> StateT:
         """Restore from a LlamaIndex Context state mapping."""
 
-        return cls.from_checkpoint_dict(state)
+        return cls.from_checkpoint_dict(state, runtime=runtime)
 
     @classmethod
-    def from_autogen_state(cls: Type[StateT], state: Mapping[str, Any]) -> StateT:
+    def from_autogen_state(
+        cls: Type[StateT],
+        state: Mapping[str, Any],
+        *,
+        runtime: Optional[AgentStateRuntime] = None,
+    ) -> StateT:
         """Restore from an AutoGen state mapping."""
 
-        return cls.from_checkpoint_dict(state)
+        return cls.from_checkpoint_dict(state, runtime=runtime)
 
     def __getitem__(self, name: str) -> Any:
         """Return a hydrated field value by name."""

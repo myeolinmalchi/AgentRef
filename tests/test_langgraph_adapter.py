@@ -59,6 +59,20 @@ def test_langgraph_bound_adapter_exposes_schema_and_wraps_nodes() -> None:
     }
 
 
+def test_langgraph_bound_adapter_can_take_backend_without_global_configure() -> None:
+    backend = InMemoryCAS("adapter-local")
+    adapter = LangGraphAdapter(LangGraphResearchState, backend=backend)
+
+    update = adapter.externalize_node_update({"docs": ["doc-a"], "blob": b"payload"})
+
+    assert backend.object_count == 2
+    assert update["docs"]["agentstate_ref"]["backend_id"] == "adapter-local"
+    assert adapter.hydrate_state_for_node(update) == {
+        "docs": ["doc-a"],
+        "blob": b"payload",
+    }
+
+
 def test_langgraph_adapter_installs_reducers_for_externalized_fields() -> None:
     adapter = LangGraphAdapter()
 

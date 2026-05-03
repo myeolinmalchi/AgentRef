@@ -76,7 +76,7 @@ class ContentRef:
             raise UnresolvedReferenceError(
                 f"Cannot resolve ContentRef {self.hash!r}: no backend was provided."
             )
-        if active_backend.backend_id != self.backend_id:
+        if not active_backend.can_resolve(self.backend_id):
             raise UnresolvedReferenceError(
                 "Cannot resolve ContentRef "
                 f"{self.hash!r}: backend {active_backend.backend_id!r} does not "

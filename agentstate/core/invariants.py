@@ -68,7 +68,7 @@ def validate_externalized_ref(
         )
 
     active_backend = backend or get_config().backend
-    if ref.backend_id != active_backend.backend_id:
+    if not active_backend.can_resolve(ref.backend_id):
         raise AgentStateError(
             f"Externalized field {field_name!r} references backend "
             f"{ref.backend_id!r}, but active backend is "

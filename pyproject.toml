@@ -16,7 +16,8 @@ dependencies = [
 langgraph = ["langgraph>=0.2"]
 llamaindex = ["llama-index-core"]
 autogen = ["autogen-agentchat"]
-all = ["langgraph>=0.2", "llama-index-core", "autogen-agentchat"]
+postgres = ["psycopg[binary]>=3.1"]
+all = ["langgraph>=0.2", "llama-index-core", "autogen-agentchat", "psycopg[binary]>=3.1"]
 dev = ["mypy", "pytest"]
 bench = ["psutil", "matplotlib"]
 
