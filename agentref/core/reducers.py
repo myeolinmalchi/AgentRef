@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set
 
-from agentstate.core.reference import ContentRef
+from agentref.core.reference import ContentRef
 
 
 def ref_aware_dict_merge(left: Dict[Any, Any], right: Dict[Any, Any]) -> Dict[Any, Any]:
@@ -68,7 +68,7 @@ def _content_ref_hash(value: Any) -> Optional[str]:
     if isinstance(value, ContentRef):
         return value.hash
     if isinstance(value, Mapping):
-        wrapper = value.get("agentstate_ref")
+        wrapper = value.get("agentref_ref")
         if isinstance(wrapper, Mapping):
             raw_hash = wrapper.get("hash")
             return str(raw_hash) if raw_hash is not None else None

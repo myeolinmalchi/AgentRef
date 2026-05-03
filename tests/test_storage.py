@@ -6,9 +6,9 @@ import pickle
 
 import pytest
 
-from agentstate.core.reference import ContentRef
-from agentstate.exceptions import SerializationError, UnresolvedReferenceError
-from agentstate.storage import InMemoryCAS
+from agentref.core.reference import ContentRef
+from agentref.exceptions import SerializationError, UnresolvedReferenceError
+from agentref.storage import InMemoryCAS
 
 
 def _store_object(backend: InMemoryCAS, value: object) -> ContentRef:

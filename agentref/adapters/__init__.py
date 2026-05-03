@@ -1,24 +1,24 @@
-"""Framework adapters for AgentState."""
+"""Framework adapters for AgentRefState."""
 
 from __future__ import annotations
 
 from typing import Any, Optional, Type
 
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.adapters.base import BaseFrameworkAdapter
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.adapters.llamaindex import LlamaIndexAdapter
-from agentstate.config import AgentStateRuntime
-from agentstate.core.state import AgentState
-from agentstate.detection.framework import Framework, detect_active_framework
-from agentstate.storage.base import BaseCASBackend
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.adapters.base import BaseFrameworkAdapter
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.adapters.llamaindex import LlamaIndexAdapter
+from agentref.config import AgentRefRuntime
+from agentref.core.state import AgentRefState
+from agentref.detection.framework import Framework, detect_active_framework
+from agentref.storage.base import BaseCASBackend
 
 
 def get_adapter(
     framework: Framework,
-    state_cls: Optional[Type[AgentState]] = None,
+    state_cls: Optional[Type[AgentRefState]] = None,
     *,
-    runtime: Optional[AgentStateRuntime] = None,
+    runtime: Optional[AgentRefRuntime] = None,
     backend: Optional[BaseCASBackend] = None,
     inline_threshold_bytes: Optional[int] = None,
 ) -> BaseFrameworkAdapter:
@@ -49,10 +49,10 @@ def get_adapter(
 
 
 def auto_adapt(
-    state_cls: Type[AgentState],
+    state_cls: Type[AgentRefState],
     explicit: Optional[Framework] = None,
     *,
-    runtime: Optional[AgentStateRuntime] = None,
+    runtime: Optional[AgentRefRuntime] = None,
     backend: Optional[BaseCASBackend] = None,
     inline_threshold_bytes: Optional[int] = None,
 ) -> Any:

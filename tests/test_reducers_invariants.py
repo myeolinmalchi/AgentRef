@@ -4,23 +4,23 @@ from __future__ import annotations
 
 import pytest
 
-from agentstate.config import configure
-from agentstate.core.invariants import (
-    validate_agent_state,
+from agentref.config import configure
+from agentref.core.invariants import (
+    validate_agent_ref,
     validate_checkpoint_state,
     validate_externalized_ref,
     validate_inline_value,
 )
-from agentstate.core.reducers import (
+from agentref.core.reducers import (
     ref_aware_dict_merge,
     ref_aware_list_append,
     ref_aware_replace,
 )
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.exceptions import AgentStateError, InlineSizeExceeded
-from agentstate.storage import InMemoryCAS
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.exceptions import AgentRefError, InlineSizeExceeded
+from agentref.storage import InMemoryCAS
 
 
 def _ref(content_hash: str, backend_id: str = "memory") -> ContentRef:
@@ -78,7 +78,7 @@ def test_validate_inline_value_raises_when_serialized_size_exceeds_limit() -> No
 
 
 def test_validate_externalized_ref_rejects_raw_payload() -> None:
-    with pytest.raises(AgentStateError, match="ContentRef"):
+    with pytest.raises(AgentRefError, match="ContentRef"):
         validate_externalized_ref("docs", ["raw-doc"])
 
 
@@ -87,41 +87,41 @@ def test_validate_externalized_ref_checks_backend_id_and_existence() -> None:
     configure(backend=backend)
     wrong_backend_ref = _ref("a" * 64, backend_id="other")
 
-    with pytest.raises(AgentStateError, match="references backend"):
+    with pytest.raises(AgentRefError, match="references backend"):
         validate_externalized_ref("docs", wrong_backend_ref)
 
     missing_ref = _ref("b" * 64, backend_id="active")
-    with pytest.raises(AgentStateError, match="missing content"):
+    with pytest.raises(AgentRefError, match="missing content"):
         validate_externalized_ref("docs", missing_ref, require_exists=True)
 
 
-def test_validate_agent_state_accepts_safe_checkpoint_and_existing_ref() -> None:
+def test_validate_agent_ref_accepts_safe_checkpoint_and_existing_ref() -> None:
     backend = InMemoryCAS("memory")
     configure(backend=backend)
 
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
     state = ResearchState(step="retrieve", docs=["doc-a"])
 
-    validate_agent_state(state, require_externalized_exists=True)
+    validate_agent_ref(state, require_externalized_exists=True)
 
 
 def test_validate_checkpoint_state_rejects_unknown_fields() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
 
-    with pytest.raises(AgentStateError, match="unknown field"):
+    with pytest.raises(AgentRefError, match="unknown field"):
         validate_checkpoint_state(ResearchState, {"step": "ok", "extra": True})
 
 
 def test_validate_checkpoint_state_rejects_externalized_payloads() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
-    with pytest.raises(AgentStateError, match="Externalized field"):
+    with pytest.raises(AgentRefError, match="Externalized field"):
         validate_checkpoint_state(
             ResearchState,
             {"step": "retrieve", "docs": ["raw-doc"]},

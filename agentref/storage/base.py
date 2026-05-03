@@ -8,7 +8,7 @@ import pickle
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, cast
 
-from agentstate.exceptions import SerializationError
+from agentref.exceptions import SerializationError
 
 
 class BaseCASBackend(ABC):

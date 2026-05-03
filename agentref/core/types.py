@@ -1,4 +1,4 @@
-"""Generic marker types for AgentState fields."""
+"""Generic marker types for AgentRefState fields."""
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
-# AgentState
+# AgentRef
 
 Agent checkpoints should not have to carry your entire data plane.
 
-AgentState externalizes large workflow state into content-addressed storage
+AgentRef externalizes large workflow state into content-addressed storage
 while keeping only compact references in LangGraph, LlamaIndex, AutoGen, and
 Deep Agents-style checkpoints. It gives state fields two explicit roles:
 
@@ -22,7 +22,7 @@ Deep Agents-based complex workflow after obvious large-payload trimming was
 already in place; the other rows are deterministic complex workflow benchmarks
 that preserve final output hashes.
 
-| Workload | Scenario | Baseline peak RSS | AgentState peak RSS | Peak RSS reduction |
+| Workload | Scenario | Baseline peak RSS | AgentRef peak RSS | Peak RSS reduction |
 | --- | --- | ---: | ---: | ---: |
 | LangGraph | Quality-preserving complex benchmark, 3-run median | 703.6 MiB | 191.6 MiB | 72.8% |
 | LlamaIndex | Quality-preserving complex benchmark, 3-run median | 902.5 MiB | 229.8 MiB | 74.5% |
@@ -30,7 +30,7 @@ that preserve final output hashes.
 | Deep Agents-based complex workflow | Real workflow, 10 concurrent runs | 1.056 GiB | 803.4 MiB | 25.7% |
 
 For the Deep Agents-based workflow, idle RSS for the application process was
-effectively unchanged (267.6 MiB baseline vs. 266.5 MiB with AgentState). On an
+effectively unchanged (267.6 MiB baseline vs. 266.5 MiB with AgentRef). On an
 idle-adjusted basis, application RSS growth fell 34.0% (813.7 MiB -> 536.9 MiB).
 The companion Postgres process peak fell 35.6% (331.8 MiB -> 213.6 MiB), and its
 idle-adjusted RSS growth fell 41.0%. Both variants completed 10/10 runs.
@@ -42,17 +42,17 @@ RSS values across machines.
 ## Install
 
 ```bash
-pip install agentstate
+pip install agentref
 ```
 
 Optional framework integrations are split by extra:
 
 ```bash
-pip install "agentstate[langgraph]"
-pip install "agentstate[llamaindex]"
-pip install "agentstate[autogen]"
-pip install "agentstate[postgres]"
-pip install "agentstate[all]"
+pip install "agentref[langgraph]"
+pip install "agentref[llamaindex]"
+pip install "agentref[autogen]"
+pip install "agentref[postgres]"
+pip install "agentref[all]"
 ```
 
 ## Usage
@@ -60,10 +60,10 @@ pip install "agentstate[all]"
 ### Declare State
 
 ```python
-from agentstate import AgentState, Externalized, Inline
+from agentref import AgentRefState, Externalized, Inline
 
 
-class ResearchState(AgentState):
+class ResearchState(AgentRefState):
     current_step: Inline[str]
     iteration: Inline[int]
     citations: Inline[list[str]]
@@ -76,12 +76,12 @@ class ResearchState(AgentState):
 ```python
 from langgraph.graph import StateGraph
 
-from agentstate import AgentState, Externalized, Inline
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.storage import FilesystemCAS
+from agentref import AgentRefState, Externalized, Inline
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.storage import FilesystemCAS
 
 
-class RAGState(AgentState):
+class RAGState(AgentRefState):
     question: Inline[str]
     docs: Externalized[list[dict]]
     answer: Inline[str]
@@ -111,12 +111,12 @@ graph.add_node("answer", adapter.wrap_node(answer))
 ### LlamaIndex Workflow
 
 ```python
-from agentstate import AgentState, Externalized, Inline
-from agentstate.adapters.llamaindex import LlamaIndexAdapter
-from agentstate.storage import FilesystemCAS
+from agentref import AgentRefState, Externalized, Inline
+from agentref.adapters.llamaindex import LlamaIndexAdapter
+from agentref.storage import FilesystemCAS
 
 
-class WorkflowState(AgentState):
+class WorkflowState(AgentRefState):
     current_step: Inline[str]
     docs: Externalized[list[dict]]
 
@@ -139,13 +139,13 @@ externalized fields.
 
 ### AutoGen
 
-AutoGen does not expose one stable state schema across versions. AgentState
+AutoGen does not expose one stable state schema across versions. AgentRef
 therefore provides explicit helpers for state dictionaries and message-history
 payloads instead of monkeypatching Agent classes.
 
 ```python
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.storage import FilesystemCAS
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.storage import FilesystemCAS
 
 adapter = AutoGenAdapter(backend=FilesystemCAS("./state_blobs"))
 
@@ -174,8 +174,8 @@ metadata, or operational cleanup.
 All backends are passed directly to adapters:
 
 ```python
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.storage import FilesystemCAS, InMemoryCAS, PostgresCAS
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.storage import FilesystemCAS, InMemoryCAS, PostgresCAS
 
 memory_adapter = LangGraphAdapter(RAGState, backend=InMemoryCAS())
 local_adapter = LangGraphAdapter(RAGState, backend=FilesystemCAS("./state_blobs"))
@@ -183,7 +183,7 @@ postgres_adapter = LangGraphAdapter(
     RAGState,
     backend=PostgresCAS(
         dsn="postgresql://user:pass@localhost:5432/app",
-        backend_id="postgres:agentstate",
+        backend_id="postgres:agentref",
         default_ttl_seconds=7 * 24 * 3600,
     ),
 )
@@ -191,19 +191,19 @@ postgres_adapter = LangGraphAdapter(
 
 `PostgresCAS` stores `created_at`, `last_accessed_at`, and `expires_at`
 metadata. Expired payloads are removed explicitly with `backend.prune_expired()`;
-AgentState does not delete referenced objects automatically.
+AgentRef does not delete referenced objects automatically.
 
 Existing filesystem payloads can be copied into Postgres without rewriting old
 checkpoints by configuring the Postgres backend with the old backend id as an
 alias:
 
 ```python
-from agentstate.storage import FilesystemCAS, PostgresCAS, migrate_cas
+from agentref.storage import FilesystemCAS, PostgresCAS, migrate_cas
 
 old = FilesystemCAS("./state_blobs")
 new = PostgresCAS(
     dsn="postgresql://user:pass@localhost:5432/app",
-    backend_id="postgres:agentstate",
+    backend_id="postgres:agentref",
     backend_aliases=[old.backend_id],
 )
 

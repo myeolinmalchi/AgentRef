@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.storage import FilesystemCAS
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.storage import FilesystemCAS
 
 
 def planner_message(task: str) -> Dict[str, str]:
@@ -24,7 +24,7 @@ def worker_tool_message() -> Dict[str, str]:
 
 
 def run_conversation(adapter: AutoGenAdapter) -> List[Dict[str, Any]]:
-    """Run a small multi-agent conversation history through AgentState."""
+    """Run a small multi-agent conversation history through AgentRef."""
 
     messages = [planner_message("research"), worker_tool_message()]
     checkpoint_messages = adapter.externalize_message_history(

@@ -1,4 +1,4 @@
-"""LlamaIndex Workflow adapter for AgentState."""
+"""LlamaIndex Workflow adapter for AgentRefState."""
 
 from __future__ import annotations
 
@@ -6,22 +6,22 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Type, TypeVar, cast
 
-from agentstate.adapters.base import (
+from agentref.adapters.base import (
     AsyncContextStoreProxy,
     BaseFrameworkAdapter,
     MappingStoreProxy,
     reducer_for_field,
 )
-from agentstate.core.state import AgentState
+from agentref.core.state import AgentRefState
 
-StateT = TypeVar("StateT", bound=AgentState)
+StateT = TypeVar("StateT", bound=AgentRefState)
 
 
 @dataclass(frozen=True)
 class LlamaIndexStateSpec:
-    """Description of an AgentState class for LlamaIndex Context stores."""
+    """Description of an AgentRefState class for LlamaIndex Context stores."""
 
-    state_cls: Type[AgentState]
+    state_cls: Type[AgentRefState]
     fields: Dict[str, str]
 
 
@@ -38,7 +38,7 @@ class LlamaIndexAdapter(BaseFrameworkAdapter):
 
     def wrap_state_class(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> LlamaIndexStateSpec:
         """Return metadata describing Context store fields."""
 
@@ -50,7 +50,7 @@ class LlamaIndexAdapter(BaseFrameworkAdapter):
 
     def install_reducers(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Return reducers for externalized Context store fields."""
 
@@ -65,7 +65,7 @@ class LlamaIndexAdapter(BaseFrameworkAdapter):
         state_cls_or_store: Any,
         store: Optional[Any] = None,
     ) -> Any:
-        """Wrap a Context.store-like mapping with AgentState semantics."""
+        """Wrap a Context.store-like mapping with AgentRefState semantics."""
 
         if store is None:
             state_cls = self._require_state_cls()
@@ -88,7 +88,7 @@ class LlamaIndexAdapter(BaseFrameworkAdapter):
     def serialize_for_checkpoint(self, state_instance: Any) -> bytes:
         """Serialize a LlamaIndex Context-compatible checkpoint."""
 
-        if isinstance(state_instance, AgentState):
+        if isinstance(state_instance, AgentRefState):
             return self._serialize_state_for_class(state_instance, type(state_instance))
         return self._serialize_state_for_class_like_mapping(state_instance)
 
@@ -97,7 +97,7 @@ class LlamaIndexAdapter(BaseFrameworkAdapter):
         data: bytes,
         state_cls: Optional[Type[StateT]] = None,
     ) -> StateT:
-        """Restore an AgentState instance from Context checkpoint bytes."""
+        """Restore an AgentRefState instance from Context checkpoint bytes."""
 
         resolved = cast(Type[StateT], self._require_state_cls(state_cls))
         return self._deserialize_state_for_class(data, resolved)

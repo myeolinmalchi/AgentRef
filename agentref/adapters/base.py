@@ -8,14 +8,14 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableMapping
 from typing import Any, Dict, Iterator, Mapping, Optional, Type, TypeVar
 
-from agentstate.config import AgentStateRuntime, create_runtime, get_config
-from agentstate.core.invariants import validate_checkpoint_state
-from agentstate.core.reducers import ref_aware_replace
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState, StateField
-from agentstate.storage.base import BaseCASBackend
+from agentref.config import AgentRefRuntime, create_runtime, get_config
+from agentref.core.invariants import validate_checkpoint_state
+from agentref.core.reducers import ref_aware_replace
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState, StateField
+from agentref.storage.base import BaseCASBackend
 
-StateT = TypeVar("StateT", bound=AgentState)
+StateT = TypeVar("StateT", bound=AgentRefState)
 
 
 class BaseFrameworkAdapter(ABC):
@@ -23,19 +23,19 @@ class BaseFrameworkAdapter(ABC):
 
     def __init__(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
         *,
-        runtime: Optional[AgentStateRuntime] = None,
+        runtime: Optional[AgentRefRuntime] = None,
         backend: Optional[BaseCASBackend] = None,
         inline_threshold_bytes: Optional[int] = None,
     ) -> None:
-        """Create an adapter optionally bound to one ``AgentState`` class."""
+        """Create an adapter optionally bound to one ``AgentRefState`` class."""
 
         if state_cls is not None and (
-            not isinstance(state_cls, type) or not issubclass(state_cls, AgentState)
+            not isinstance(state_cls, type) or not issubclass(state_cls, AgentRefState)
         ):
             raise TypeError(
-                "state_cls must be an AgentState subclass, found "
+                "state_cls must be an AgentRefState subclass, found "
                 f"{type(state_cls).__name__}."
             )
         self._state_cls = state_cls
@@ -50,13 +50,13 @@ class BaseFrameworkAdapter(ABC):
         )
 
     @property
-    def state_cls(self) -> Optional[Type[AgentState]]:
+    def state_cls(self) -> Optional[Type[AgentRefState]]:
         """Return the state class bound to this adapter, if any."""
 
         return self._state_cls
 
     @property
-    def runtime(self) -> AgentStateRuntime:
+    def runtime(self) -> AgentRefRuntime:
         """Return this adapter's explicit runtime."""
 
         return self._runtime or get_config()
@@ -69,8 +69,8 @@ class BaseFrameworkAdapter(ABC):
 
     def _require_state_cls(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
-    ) -> Type[AgentState]:
+        state_cls: Optional[Type[AgentRefState]] = None,
+    ) -> Type[AgentRefState]:
         """Return an explicit or constructor-bound state class."""
 
         selected = state_cls if state_cls is not None else self._state_cls
@@ -79,9 +79,9 @@ class BaseFrameworkAdapter(ABC):
                 "A state class is required. Pass it to the adapter constructor "
                 "or to this method."
             )
-        if not isinstance(selected, type) or not issubclass(selected, AgentState):
+        if not isinstance(selected, type) or not issubclass(selected, AgentRefState):
             raise TypeError(
-                "state_cls must be an AgentState subclass, found "
+                "state_cls must be an AgentRefState subclass, found "
                 f"{type(selected).__name__}."
             )
         return selected
@@ -89,14 +89,14 @@ class BaseFrameworkAdapter(ABC):
     @abstractmethod
     def wrap_state_class(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Any:
-        """Convert an ``AgentState`` class into a framework schema."""
+        """Convert an ``AgentRefState`` class into a framework schema."""
 
     @abstractmethod
     def install_reducers(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Return reducer functions for framework state channels."""
 
@@ -110,7 +110,7 @@ class BaseFrameworkAdapter(ABC):
         data: bytes,
         state_cls: Optional[Type[StateT]] = None,
     ) -> StateT:
-        """Restore an ``AgentState`` instance from checkpoint bytes."""
+        """Restore an ``AgentRefState`` instance from checkpoint bytes."""
 
     def schema(self) -> Any:
         """Return the framework schema for the constructor-bound state class."""
@@ -125,7 +125,7 @@ class BaseFrameworkAdapter(ABC):
     def externalize(
         self,
         values: Mapping[str, Any],
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Externalize a mapping using an explicit or constructor-bound state."""
 
@@ -134,7 +134,7 @@ class BaseFrameworkAdapter(ABC):
     def hydrate(
         self,
         values: Mapping[str, Any],
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Hydrate a mapping using an explicit or constructor-bound state."""
 
@@ -142,7 +142,7 @@ class BaseFrameworkAdapter(ABC):
 
     def externalize_mapping(
         self,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         values: Mapping[str, Any],
     ) -> Dict[str, Any]:
         """Return ``values`` with externalized fields converted to ContentRef."""
@@ -165,7 +165,7 @@ class BaseFrameworkAdapter(ABC):
 
     def hydrate_mapping(
         self,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         values: Mapping[str, Any],
     ) -> Dict[str, Any]:
         """Return ``values`` with ContentRef externalized fields hydrated."""
@@ -183,19 +183,19 @@ class BaseFrameworkAdapter(ABC):
     def checkpoint_dict_from_state(self, state_instance: Any) -> Dict[str, Any]:
         """Extract a checkpoint-safe dict from state-like objects."""
 
-        if isinstance(state_instance, AgentState):
+        if isinstance(state_instance, AgentRefState):
             return state_instance.to_checkpoint_dict()
         if isinstance(state_instance, Mapping):
             return dict(state_instance)
         raise TypeError(
-            "state_instance must be an AgentState or mapping, found "
+            "state_instance must be an AgentRefState or mapping, found "
             f"{type(state_instance).__name__}."
         )
 
     def _serialize_state_for_class(
         self,
         state_instance: Any,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
     ) -> bytes:
         """Serialize state after validating it against ``state_cls``."""
 
@@ -234,7 +234,7 @@ class BaseFrameworkAdapter(ABC):
     def _wrap_content_ref(self, ref: ContentRef) -> Dict[str, Dict[str, Any]]:
         """Return a framework-serializer-safe reference wrapper."""
 
-        return {"agentstate_ref": ref.to_dict()}
+        return {"agentref_ref": ref.to_dict()}
 
     def _to_content_ref_if_reference_like(self, value: Any) -> Optional[ContentRef]:
         """Return a ContentRef for supported reference representations."""
@@ -242,7 +242,7 @@ class BaseFrameworkAdapter(ABC):
         if isinstance(value, ContentRef):
             return value
         if isinstance(value, Mapping):
-            wrapper = value.get("agentstate_ref")
+            wrapper = value.get("agentref_ref")
             if isinstance(wrapper, Mapping):
                 return ContentRef.from_dict(dict(wrapper))
             required_keys = {"hash", "backend_id", "type_name", "size_bytes"}
@@ -252,10 +252,10 @@ class BaseFrameworkAdapter(ABC):
 
     def _normalize_reference_wrappers(
         self,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         values: Mapping[str, Any],
     ) -> Dict[str, Any]:
-        """Convert framework-safe wrappers back to ContentRef for AgentState."""
+        """Convert framework-safe wrappers back to ContentRef for AgentRefState."""
 
         normalized = dict(values)
         for name, field in state_cls.fields().items():
@@ -268,7 +268,7 @@ class BaseFrameworkAdapter(ABC):
 
 
 def reducer_for_field(field: StateField) -> Any:
-    """Return the reducer that best matches an AgentState field."""
+    """Return the reducer that best matches an AgentRefState field."""
 
     if field.kind == "externalized":
         return ref_aware_replace
@@ -281,7 +281,7 @@ class MappingStoreProxy(MutableMapping[str, Any]):
     def __init__(
         self,
         adapter: BaseFrameworkAdapter,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         store: MutableMapping[str, Any],
     ) -> None:
         """Create a proxy over a framework-owned mutable store."""
@@ -336,7 +336,7 @@ class AsyncContextStoreProxy:
     def __init__(
         self,
         adapter: BaseFrameworkAdapter,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         store: Any,
         *,
         wrap_externalized_refs: bool = False,

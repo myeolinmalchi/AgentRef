@@ -1,7 +1,7 @@
-"""AutoGen adapter for AgentState.
+"""AutoGen adapter for AgentRefState.
 
 AutoGen versions expose less uniform state machinery than LangGraph and
-LlamaIndex. This adapter therefore focuses on declared ``AgentState`` mappings
+LlamaIndex. This adapter therefore focuses on declared ``AgentRefState`` mappings
 and explicit message-history externalization helpers instead of monkeypatching
 framework Agent classes.
 """
@@ -11,11 +11,11 @@ from __future__ import annotations
 import pickle
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, cast
 
-from agentstate.adapters.base import BaseFrameworkAdapter, reducer_for_field
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
+from agentref.adapters.base import BaseFrameworkAdapter, reducer_for_field
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
 
-StateT = TypeVar("StateT", bound=AgentState)
+StateT = TypeVar("StateT", bound=AgentRefState)
 
 
 class AutoGenAdapter(BaseFrameworkAdapter):
@@ -23,15 +23,15 @@ class AutoGenAdapter(BaseFrameworkAdapter):
 
     def wrap_state_class(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
-    ) -> Type[AgentState]:
+        state_cls: Optional[Type[AgentRefState]] = None,
+    ) -> Type[AgentRefState]:
         """Return ``state_cls`` because AutoGen has no single schema protocol."""
 
         return self._require_state_cls(state_cls)
 
     def install_reducers(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Return reducers for declared externalized state fields."""
 
@@ -97,7 +97,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
                 if len(payload) <= threshold_bytes:
                     continue
                 ref = self._to_content_ref(value)
-                next_message[key] = {"agentstate_ref": ref.to_dict()}
+                next_message[key] = {"agentref_ref": ref.to_dict()}
             converted.append(next_message)
         return converted
 
@@ -118,7 +118,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
                 if not _is_ref_wrapper(value):
                     continue
                 wrapper = cast(Dict[str, Dict[str, Any]], value)
-                ref = ContentRef.from_dict(wrapper["agentstate_ref"])
+                ref = ContentRef.from_dict(wrapper["agentref_ref"])
                 next_message[key] = ref.resolve(self.backend)
             hydrated.append(next_message)
         return hydrated
@@ -126,7 +126,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
     def serialize_for_checkpoint(self, state_instance: Any) -> bytes:
         """Serialize an AutoGen-compatible state mapping."""
 
-        if isinstance(state_instance, AgentState):
+        if isinstance(state_instance, AgentRefState):
             return self._serialize_state_for_class(state_instance, type(state_instance))
         return pickle.dumps(
             self.checkpoint_dict_from_state(state_instance),
@@ -138,7 +138,7 @@ class AutoGenAdapter(BaseFrameworkAdapter):
         data: bytes,
         state_cls: Optional[Type[StateT]] = None,
     ) -> StateT:
-        """Restore an AgentState instance from AutoGen checkpoint bytes."""
+        """Restore an AgentRefState instance from AutoGen checkpoint bytes."""
 
         resolved = cast(Type[StateT], self._require_state_cls(state_cls))
         return self._deserialize_state_for_class(data, resolved)
@@ -147,4 +147,4 @@ class AutoGenAdapter(BaseFrameworkAdapter):
 def _is_ref_wrapper(value: Any) -> bool:
     """Return whether ``value`` is an adapter-created reference wrapper."""
 
-    return isinstance(value, dict) and isinstance(value.get("agentstate_ref"), dict)
+    return isinstance(value, dict) and isinstance(value.get("agentref_ref"), dict)

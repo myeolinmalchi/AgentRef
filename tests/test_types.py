@@ -7,18 +7,18 @@ from typing import get_args, get_origin
 
 import pytest
 
-from agentstate.config import configure, get_config
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
-from agentstate.core.types import (
+from agentref.config import configure, get_config
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
+from agentref.core.types import (
     Externalized,
     Inline,
     get_wrapped_type,
     is_externalized_annotation,
     is_inline_annotation,
 )
-from agentstate.exceptions import AgentStateError, InlineSizeExceeded
-from agentstate.storage import InMemoryCAS
+from agentref.exceptions import AgentRefError, InlineSizeExceeded
+from agentref.storage import InMemoryCAS
 
 
 def test_inline_and_externalized_are_runtime_generic_markers() -> None:
@@ -49,12 +49,12 @@ def test_configure_updates_backend_threshold_and_framework() -> None:
 
 
 def test_configure_rejects_non_positive_inline_threshold() -> None:
-    with pytest.raises(AgentStateError, match="positive integer"):
+    with pytest.raises(AgentRefError, match="positive integer"):
         configure(inline_threshold_bytes=0)
 
 
 def test_inline_descriptor_uses_runtime_threshold_after_class_definition() -> None:
-    class TinyState(AgentState):
+    class TinyState(AgentRefState):
         payload: Inline[bytes]
 
     state = TinyState()
@@ -71,7 +71,7 @@ def test_externalized_descriptor_stores_content_ref_and_hydrates_value() -> None
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         docs: Externalized[list[dict[str, int]]]
 
     value = [{"id": 1}, {"id": 2}]
@@ -88,7 +88,7 @@ def test_externalized_descriptor_deduplicates_same_data() -> None:
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         docs: Externalized[list[str]]
 
     first = ResearchState(docs=["same"])
@@ -102,7 +102,7 @@ def test_externalized_payload_never_appears_in_checkpoint_bytes_after_hydration(
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class BlobState(AgentState):
+    class BlobState(AgentRefState):
         blob: Externalized[bytes]
 
     raw_blob = b"unique-binary-payload-that-must-not-be-checkpointed"
@@ -121,7 +121,7 @@ def test_externalized_descriptor_accepts_existing_content_ref_for_restore() -> N
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class BlobState(AgentState):
+    class BlobState(AgentRefState):
         blob: Externalized[bytes]
 
     original = BlobState(blob=b"payload")

@@ -8,12 +8,12 @@ from typing import Any, Iterable, cast
 
 import pytest
 
-from agentstate.config import configure
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.detection.framework import Framework, detect_active_framework
-from agentstate.exceptions import (
-    AgentStateError,
+from agentref.config import configure
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.detection.framework import Framework, detect_active_framework
+from agentref.exceptions import (
+    AgentRefError,
     AmbiguousFrameworkError,
     NoFrameworkDetectedError,
 )
@@ -111,19 +111,19 @@ def test_detect_active_framework_raises_when_ambiguous(
 def test_detect_active_framework_rejects_unknown_configured_value() -> None:
     configure(framework="unknown")
 
-    with pytest.raises(AgentStateError, match="Unknown framework"):
+    with pytest.raises(AgentRefError, match="Unknown framework"):
         detect_active_framework()
 
 
 def test_detect_active_framework_rejects_invalid_configured_type() -> None:
     configure(framework=object())
 
-    with pytest.raises(AgentStateError, match="Framework must"):
+    with pytest.raises(AgentRefError, match="Framework must"):
         detect_active_framework()
 
 
 def test_dispatch_to_returns_checkpoint_safe_mapping() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
@@ -137,7 +137,7 @@ def test_dispatch_to_returns_checkpoint_safe_mapping() -> None:
 
 
 def test_dispatch_to_accepts_string_values_at_runtime() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
 
     state = ResearchState(step="retrieve")

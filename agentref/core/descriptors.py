@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type
 
-from agentstate.config import get_config
-from agentstate.core.reference import ContentRef
-from agentstate.exceptions import AgentStateError, InlineSizeExceeded
+from agentref.config import get_config
+from agentref.core.reference import ContentRef
+from agentref.exceptions import AgentRefError, InlineSizeExceeded
 
 
 def type_name_for(annotation: Any, value: Optional[Any] = None) -> str:
@@ -26,13 +26,13 @@ def type_name_for(annotation: Any, value: Optional[Any] = None) -> str:
 def runtime_for(instance: Any) -> Any:
     """Return the runtime attached to ``instance`` or the global fallback."""
 
-    return getattr(instance, "_agentstate_runtime", None) or get_config()
+    return getattr(instance, "_agentref_runtime", None) or get_config()
 
 
 class InlineDescriptor:
     """Descriptor for ``Inline[T]`` fields.
 
-    Values are stored directly in the owning ``AgentState`` instance after their
+    Values are stored directly in the owning ``AgentRefState`` instance after their
     serialized size is checked against the active configuration threshold.
     """
 
@@ -120,7 +120,7 @@ class ExternalizedDescriptor:
             ) from exc
 
         if not isinstance(ref, ContentRef):
-            raise AgentStateError(
+            raise AgentRefError(
                 f"Externalized field {self.name!r} must store ContentRef, "
                 f"found {type(ref).__name__}."
             )

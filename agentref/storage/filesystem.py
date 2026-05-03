@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Iterator, Union
 
-from agentstate.storage.base import BaseCASBackend
+from agentref.storage.base import BaseCASBackend
 
 
 class FilesystemCAS(BaseCASBackend):

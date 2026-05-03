@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from agentstate.core.reference import ContentRef
-from agentstate.storage import FilesystemCAS
+from agentref.core.reference import ContentRef
+from agentref.storage import FilesystemCAS
 
 
 def test_filesystem_cas_stores_objects_in_sharded_paths(tmp_path: Path) -> None:

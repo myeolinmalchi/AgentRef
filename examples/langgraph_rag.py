@@ -1,15 +1,15 @@
-"""LangGraph RAG example using AgentState externalized fields."""
+"""LangGraph RAG example using AgentRef externalized fields."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from agentstate import AgentState, Externalized, Inline
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.storage import FilesystemCAS
+from agentref import AgentRefState, Externalized, Inline
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.storage import FilesystemCAS
 
 
-class RAGState(AgentState):
+class RAGState(AgentRefState):
     """State for a simple retrieval-augmented generation graph."""
 
     question: Inline[str]
@@ -23,7 +23,7 @@ def retrieve_node(state: Dict[str, Any]) -> Dict[str, Any]:
     docs = [
         {
             "id": "doc-1",
-            "text": "AgentState stores large documents outside checkpoints.",
+            "text": "AgentRef stores large documents outside checkpoints.",
         }
     ]
     return {"docs": docs}
@@ -59,7 +59,7 @@ def main() -> None:
 
     adapter = LangGraphAdapter(RAGState, backend=FilesystemCAS(root="./state_blobs"))
     graph = build_graph(adapter).compile()
-    result = graph.invoke({"question": "How does AgentState avoid bloat?"})
+    result = graph.invoke({"question": "How does AgentRef avoid bloat?"})
     print(result["answer"])
 
 

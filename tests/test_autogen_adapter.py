@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.config import configure
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.storage import InMemoryCAS
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.config import configure
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.storage import InMemoryCAS
 
 
-class AutoGenResearchState(AgentState):
+class AutoGenResearchState(AgentRefState):
     """State class used by AutoGen adapter tests."""
 
     step: Inline[str]
@@ -72,7 +72,7 @@ def test_autogen_message_history_externalizes_large_message_fields() -> None:
 
     content = messages[0]["content"]
     assert isinstance(content, dict)
-    assert "agentstate_ref" in content
+    assert "agentref_ref" in content
     assert raw.encode() not in str(messages).encode()
     assert adapter.hydrate_message_history(messages)[0]["content"] == raw
 
@@ -103,7 +103,7 @@ def test_autogen_checkpoint_bytes_exclude_externalized_payload() -> None:
     )
 
 
-def test_autogen_deserializes_checkpoint_to_agent_state() -> None:
+def test_autogen_deserializes_checkpoint_to_agent_ref() -> None:
     adapter = AutoGenAdapter()
     state = AutoGenResearchState(step="tool", tool_result="result")
 

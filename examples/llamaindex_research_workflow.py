@@ -1,15 +1,15 @@
-"""LlamaIndex Workflow-style example using AgentState Context stores."""
+"""LlamaIndex Workflow-style example using AgentRef Context stores."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
-from agentstate import AgentState, Externalized, Inline
-from agentstate.adapters.llamaindex import LlamaIndexAdapter
-from agentstate.storage import FilesystemCAS
+from agentref import AgentRefState, Externalized, Inline
+from agentref.adapters.llamaindex import LlamaIndexAdapter
+from agentref.storage import FilesystemCAS
 
 
-class ResearchWorkflowState(AgentState):
+class ResearchWorkflowState(AgentRefState):
     """State for a research workflow."""
 
     current_step: Inline[str]

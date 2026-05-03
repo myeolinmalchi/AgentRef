@@ -1,4 +1,4 @@
-"""LangGraph adapter for AgentState."""
+"""LangGraph adapter for AgentRefState."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from functools import wraps
 from typing import Annotated, Any, Callable, Dict, Mapping, Optional, Type, TypeVar, cast
 from typing import TypedDict as _TypedDict
 
-from agentstate.adapters.base import BaseFrameworkAdapter, reducer_for_field
-from agentstate.core.state import AgentState
+from agentref.adapters.base import BaseFrameworkAdapter, reducer_for_field
+from agentref.core.state import AgentRefState
 
-StateT = TypeVar("StateT", bound=AgentState)
+StateT = TypeVar("StateT", bound=AgentRefState)
 
 
 class LangGraphAdapter(BaseFrameworkAdapter):
@@ -20,7 +20,7 @@ class LangGraphAdapter(BaseFrameworkAdapter):
 
     def wrap_state_class(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Any:
         """Return a TypedDict schema for ``StateGraph``.
 
@@ -42,12 +42,12 @@ class LangGraphAdapter(BaseFrameworkAdapter):
             annotations,
             total=False,
         )
-        setattr(schema, "__agentstate_origin__", state_cls)
+        setattr(schema, "__agentref_origin__", state_cls)
         return schema
 
     def install_reducers(
         self,
-        state_cls: Optional[Type[AgentState]] = None,
+        state_cls: Optional[Type[AgentRefState]] = None,
     ) -> Dict[str, Any]:
         """Return reducers for declared externalized channels."""
 
@@ -142,7 +142,7 @@ class LangGraphAdapter(BaseFrameworkAdapter):
     def serialize_for_checkpoint(self, state_instance: Any) -> bytes:
         """Serialize a checkpoint-safe LangGraph state mapping."""
 
-        if isinstance(state_instance, AgentState):
+        if isinstance(state_instance, AgentRefState):
             return self._serialize_state_for_class(state_instance, type(state_instance))
         return pickle.dumps(
             self.checkpoint_dict_from_state(state_instance),
@@ -154,14 +154,14 @@ class LangGraphAdapter(BaseFrameworkAdapter):
         data: bytes,
         state_cls: Optional[Type[StateT]] = None,
     ) -> StateT:
-        """Restore an AgentState instance from LangGraph checkpoint bytes."""
+        """Restore an AgentRefState instance from LangGraph checkpoint bytes."""
 
         resolved = cast(Type[StateT], self._require_state_cls(state_cls))
         return self._deserialize_state_for_class(data, resolved)
 
     def _externalize_node_result(
         self,
-        state_cls: Type[AgentState],
+        state_cls: Type[AgentRefState],
         result: Any,
     ) -> Any:
         """Externalize mapping node results while leaving framework objects alone."""

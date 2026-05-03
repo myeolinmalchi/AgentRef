@@ -7,8 +7,8 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tupl
 
 import pytest
 
-from agentstate.core.reference import ContentRef
-from agentstate.storage import InMemoryCAS, PostgresCAS, migrate_cas
+from agentref.core.reference import ContentRef
+from agentref.storage import InMemoryCAS, PostgresCAS, migrate_cas
 
 
 class FakeCursor:
@@ -161,7 +161,7 @@ def test_migrate_cas_allows_postgres_alias_to_resolve_old_refs() -> None:
     connection = FakePostgresConnection()
     target = PostgresCAS(
         connection=connection,
-        backend_id="postgres:agentstate",
+        backend_id="postgres:agentref",
         backend_aliases=[source.backend_id],
         create_table=False,
     )

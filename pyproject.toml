@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentstate"
+name = "agentref"
 version = "0.1.0"
 description = "Type-guided externalized state for LLM agent frameworks."
 readme = "README.md"
@@ -23,7 +23,7 @@ bench = ["psutil", "matplotlib"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["agentstate*"]
+include = ["agentref*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

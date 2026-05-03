@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in AgentState.
+description: Report a reproducible problem in AgentRef.
 title: "fix: "
 labels: ["bug"]
 body:
@@ -37,9 +37,9 @@ body:
     validations:
       required: true
   - type: input
-    id: agentstate-version
+    id: agentref-version
     attributes:
-      label: AgentState version
+      label: AgentRef version
       placeholder: 0.1.0
   - type: input
     id: framework

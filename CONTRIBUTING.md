@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to AgentState. Keep changes focused, tested, and easy to
+Thanks for contributing to AgentRef. Keep changes focused, tested, and easy to
 review.
 
 ## Commit Convention
@@ -57,7 +57,7 @@ reproduce or evaluate the issue:
 - expected behavior
 - actual behavior
 - minimal reproduction or workflow description
-- relevant framework, backend, and AgentState versions
+- relevant framework, backend, and AgentRef versions
 - logs or stack traces when available
 
 Security-sensitive reports should not be filed as public issues.
