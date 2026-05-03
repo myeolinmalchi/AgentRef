@@ -1,4 +1,4 @@
-"""Compatibility stress checks for AgentState storage behavior."""
+"""Compatibility stress checks for AgentRefState storage behavior."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from typing import List
 
 import pytest
 
-from agentstate import AgentState, Externalized, configure
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.core.reference import ContentRef
-from agentstate.exceptions import UnresolvedReferenceError
-from agentstate.storage import InMemoryCAS
+from agentref import AgentRefState, Externalized, configure
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.core.reference import ContentRef
+from agentref.exceptions import UnresolvedReferenceError
+from agentref.storage import InMemoryCAS
 
 
-class StorageCompatState(AgentState):
+class StorageCompatState(AgentRefState):
     """State used for backend resilience and edge-case tests."""
 
     payload: Externalized[bytes]
@@ -61,7 +61,7 @@ def test_concurrent_externalization_deduplicates_same_payload() -> None:
             [{"content": payload}],
             threshold_bytes=0,
         )[0]
-        return str(message["content"]["agentstate_ref"]["hash"])
+        return str(message["content"]["agentref_ref"]["hash"])
 
     with ThreadPoolExecutor(max_workers=8) as executor:
         hashes: List[str] = list(executor.map(lambda _: externalize_once(), range(64)))
@@ -115,8 +115,8 @@ def test_exception_before_externalization_does_not_leave_orphan_blob() -> None:
 def test_very_large_payload_round_trip_when_enabled() -> None:
     """Optional 100MB storage edge case; disabled unless explicitly requested."""
 
-    if os.environ.get("AGENTSTATE_RUN_HEAVY_COMPAT") != "1":
-        pytest.skip("set AGENTSTATE_RUN_HEAVY_COMPAT=1 to run 100MB compatibility case")
+    if os.environ.get("AGENTREF_RUN_HEAVY_COMPAT") != "1":
+        pytest.skip("set AGENTREF_RUN_HEAVY_COMPAT=1 to run 100MB compatibility case")
 
     backend = InMemoryCAS()
     configure(backend=backend)

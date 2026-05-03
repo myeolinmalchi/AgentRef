@@ -1,26 +1,26 @@
-"""AgentState base class and metaclass."""
+"""AgentRefState base class and metaclass."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, Mapping, Optional, Type, TypeVar, get_type_hints
 
-from agentstate.config import AgentStateRuntime
-from agentstate.core.descriptors import ExternalizedDescriptor, InlineDescriptor
-from agentstate.core.reference import ContentRef
-from agentstate.core.types import (
+from agentref.config import AgentRefRuntime
+from agentref.core.descriptors import ExternalizedDescriptor, InlineDescriptor
+from agentref.core.reference import ContentRef
+from agentref.core.types import (
     get_wrapped_type,
     is_externalized_annotation,
     is_inline_annotation,
 )
-from agentstate.exceptions import AgentStateError
+from agentref.exceptions import AgentRefError
 
-StateT = TypeVar("StateT", bound="AgentState")
+StateT = TypeVar("StateT", bound="AgentRefState")
 
 
 @dataclass(frozen=True)
 class StateField:
-    """Metadata for one AgentState field."""
+    """Metadata for one AgentRefState field."""
 
     name: str
     kind: str
@@ -28,22 +28,22 @@ class StateField:
     annotation: Any
 
 
-class AgentStateMeta(type):
+class AgentRefStateMeta(type):
     """Metaclass that installs descriptors from Inline/Externalized annotations."""
 
     def __new__(
-        mcs: Type["AgentStateMeta"],
+        mcs: Type["AgentRefStateMeta"],
         name: str,
         bases: tuple[type, ...],
         namespace: Dict[str, Any],
-    ) -> "AgentStateMeta":
+    ) -> "AgentRefStateMeta":
         """Create a state class and attach field descriptors."""
 
         cls = super().__new__(mcs, name, bases, namespace)
 
         fields: Dict[str, StateField] = {}
         for base in bases:
-            fields.update(getattr(base, "__agentstate_fields__", {}))
+            fields.update(getattr(base, "__agentref_fields__", {}))
 
         own_annotations = namespace.get("__annotations__", {})
         resolved_hints = mcs._resolved_type_hints(cls)
@@ -71,7 +71,7 @@ class AgentStateMeta(type):
                     annotation=annotation,
                 )
 
-        setattr(cls, "__agentstate_fields__", fields)
+        setattr(cls, "__agentref_fields__", fields)
         return cls
 
     @staticmethod
@@ -84,29 +84,29 @@ class AgentStateMeta(type):
             return dict(getattr(cls, "__annotations__", {}))
 
 
-class AgentState(metaclass=AgentStateMeta):
+class AgentRefState(metaclass=AgentRefStateMeta):
     """Framework-agnostic state object with safe checkpoint representation."""
 
-    __agentstate_fields__: ClassVar[Dict[str, StateField]]
+    __agentref_fields__: ClassVar[Dict[str, StateField]]
     _data: Dict[str, Any]
-    _agentstate_runtime: Optional[AgentStateRuntime]
+    _agentref_runtime: Optional[AgentRefRuntime]
 
     def __init__(
         self,
-        _runtime: Optional[AgentStateRuntime] = None,
+        _runtime: Optional[AgentRefRuntime] = None,
         **values: Any,
     ) -> None:
         """Initialize state fields from keyword arguments."""
 
         self._data = {}
-        self._agentstate_runtime = _runtime
+        self._agentref_runtime = _runtime
         self._assign_initial_values(values)
 
     @classmethod
     def fields(cls) -> Mapping[str, StateField]:
-        """Return declared AgentState field metadata."""
+        """Return declared AgentRefState field metadata."""
 
-        return dict(cls.__agentstate_fields__)
+        return dict(cls.__agentref_fields__)
 
     @classmethod
     def inline_fields(cls) -> Mapping[str, StateField]:
@@ -114,7 +114,7 @@ class AgentState(metaclass=AgentStateMeta):
 
         return {
             name: field
-            for name, field in cls.__agentstate_fields__.items()
+            for name, field in cls.__agentref_fields__.items()
             if field.kind == "inline"
         }
 
@@ -124,7 +124,7 @@ class AgentState(metaclass=AgentStateMeta):
 
         return {
             name: field
-            for name, field in cls.__agentstate_fields__.items()
+            for name, field in cls.__agentref_fields__.items()
             if field.kind == "externalized"
         }
 
@@ -141,7 +141,7 @@ class AgentState(metaclass=AgentStateMeta):
     def to_hydrated_dict(self) -> Dict[str, Any]:
         """Return all field values, hydrating externalized data."""
 
-        return {name: getattr(self, name) for name in self.__agentstate_fields__}
+        return {name: getattr(self, name) for name in self.__agentref_fields__}
 
     def to_langgraph_state(self) -> Dict[str, Any]:
         """Return a LangGraph-compatible checkpoint-safe state mapping."""
@@ -161,7 +161,7 @@ class AgentState(metaclass=AgentStateMeta):
     def dispatch_to(self, framework: Any) -> Dict[str, Any]:
         """Dispatch this state to a framework-specific checkpoint mapping."""
 
-        from agentstate.detection.framework import Framework, detect_active_framework
+        from agentref.detection.framework import Framework, detect_active_framework
 
         selected = detect_active_framework(framework)
         if selected is Framework.LANGGRAPH:
@@ -170,26 +170,26 @@ class AgentState(metaclass=AgentStateMeta):
             return self.to_llamaindex_context_dict()
         if selected is Framework.AUTOGEN:
             return self.to_autogen_state()
-        raise AgentStateError(f"Unsupported framework: {selected!r}")
+        raise AgentRefError(f"Unsupported framework: {selected!r}")
 
     @classmethod
     def from_checkpoint_dict(
         cls: Type[StateT],
         state: Mapping[str, Any],
         *,
-        runtime: Optional[AgentStateRuntime] = None,
+        runtime: Optional[AgentRefRuntime] = None,
     ) -> StateT:
         """Restore an instance from a checkpoint-safe mapping."""
 
         instance = cls(_runtime=runtime)
-        unknown = set(state) - set(cls.__agentstate_fields__)
+        unknown = set(state) - set(cls.__agentref_fields__)
         if unknown:
-            raise AgentStateError(
+            raise AgentRefError(
                 f"Unknown field(s) for {cls.__name__}: {', '.join(sorted(unknown))}"
             )
 
         for name, value in state.items():
-            field = cls.__agentstate_fields__[name]
+            field = cls.__agentref_fields__[name]
             if field.kind == "externalized":
                 setattr(instance, name, cls._coerce_content_ref(name, value))
             else:
@@ -201,7 +201,7 @@ class AgentState(metaclass=AgentStateMeta):
         cls: Type[StateT],
         state: Mapping[str, Any],
         *,
-        runtime: Optional[AgentStateRuntime] = None,
+        runtime: Optional[AgentRefRuntime] = None,
     ) -> StateT:
         """Restore from a LangGraph state mapping."""
 
@@ -212,7 +212,7 @@ class AgentState(metaclass=AgentStateMeta):
         cls: Type[StateT],
         state: Mapping[str, Any],
         *,
-        runtime: Optional[AgentStateRuntime] = None,
+        runtime: Optional[AgentRefRuntime] = None,
     ) -> StateT:
         """Restore from a LlamaIndex Context state mapping."""
 
@@ -223,7 +223,7 @@ class AgentState(metaclass=AgentStateMeta):
         cls: Type[StateT],
         state: Mapping[str, Any],
         *,
-        runtime: Optional[AgentStateRuntime] = None,
+        runtime: Optional[AgentRefRuntime] = None,
     ) -> StateT:
         """Restore from an AutoGen state mapping."""
 
@@ -255,9 +255,9 @@ class AgentState(metaclass=AgentStateMeta):
     def _assign_initial_values(self, values: Mapping[str, Any]) -> None:
         """Assign constructor values after validating field names."""
 
-        unknown = set(values) - set(self.__agentstate_fields__)
+        unknown = set(values) - set(self.__agentref_fields__)
         if unknown:
-            raise AgentStateError(
+            raise AgentRefError(
                 f"Unknown field(s) for {type(self).__name__}: "
                 f"{', '.join(sorted(unknown))}"
             )
@@ -266,9 +266,9 @@ class AgentState(metaclass=AgentStateMeta):
             setattr(self, name, value)
 
     def _validate_field_name(self, name: str) -> None:
-        """Raise if ``name`` is not a declared AgentState field."""
+        """Raise if ``name`` is not a declared AgentRefState field."""
 
-        if name not in self.__agentstate_fields__:
+        if name not in self.__agentref_fields__:
             raise KeyError(f"Unknown field for {type(self).__name__}: {name!r}")
 
     @staticmethod
@@ -278,11 +278,11 @@ class AgentState(metaclass=AgentStateMeta):
         if isinstance(value, ContentRef):
             return value
         if isinstance(value, dict):
-            wrapper = value.get("agentstate_ref")
+            wrapper = value.get("agentref_ref")
             if isinstance(wrapper, dict):
                 return ContentRef.from_dict(wrapper)
             return ContentRef.from_dict(value)
-        raise AgentStateError(
+        raise AgentRefError(
             f"Externalized field {name!r} must be restored from ContentRef "
             f"or ContentRef dict, found {type(value).__name__}."
         )

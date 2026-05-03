@@ -5,18 +5,18 @@ from __future__ import annotations
 import pickle
 from typing import Any, Dict, get_args, get_origin
 
-from agentstate.adapters import auto_adapt
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.config import configure
-from agentstate.core.reference import ContentRef
-from agentstate.core.reducers import ref_aware_replace
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.detection.framework import Framework
-from agentstate.storage import InMemoryCAS
+from agentref.adapters import auto_adapt
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.config import configure
+from agentref.core.reference import ContentRef
+from agentref.core.reducers import ref_aware_replace
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.detection.framework import Framework
+from agentref.storage import InMemoryCAS
 
 
-class LangGraphResearchState(AgentState):
+class LangGraphResearchState(AgentRefState):
     """State class used by LangGraph adapter tests."""
 
     step: Inline[str]
@@ -29,7 +29,7 @@ def test_langgraph_adapter_wraps_state_class_without_langgraph_installed() -> No
 
     schema = adapter.wrap_state_class(LangGraphResearchState)
 
-    assert getattr(schema, "__agentstate_origin__") is LangGraphResearchState
+    assert getattr(schema, "__agentref_origin__") is LangGraphResearchState
     assert schema.__annotations__["step"] is str
     docs_annotation = schema.__annotations__["docs"]
     assert get_origin(docs_annotation) is not None
@@ -43,7 +43,7 @@ def test_langgraph_bound_adapter_exposes_schema_and_wraps_nodes() -> None:
 
     schema = adapter.schema()
 
-    assert getattr(schema, "__agentstate_origin__") is LangGraphResearchState
+    assert getattr(schema, "__agentref_origin__") is LangGraphResearchState
 
     def retrieve(state: Dict[str, Any]) -> Dict[str, Any]:
         assert state["step"] == "retrieve"
@@ -51,8 +51,8 @@ def test_langgraph_bound_adapter_exposes_schema_and_wraps_nodes() -> None:
 
     checkpoint_update = adapter.wrap_node(retrieve)({"step": "retrieve"})
 
-    assert "agentstate_ref" in checkpoint_update["docs"]
-    assert "agentstate_ref" in checkpoint_update["blob"]
+    assert "agentref_ref" in checkpoint_update["docs"]
+    assert "agentref_ref" in checkpoint_update["blob"]
     assert adapter.hydrate_state_for_node(checkpoint_update) == {
         "docs": ["doc-a"],
         "blob": b"payload",
@@ -66,7 +66,7 @@ def test_langgraph_bound_adapter_can_take_backend_without_global_configure() -> 
     update = adapter.externalize_node_update({"docs": ["doc-a"], "blob": b"payload"})
 
     assert backend.object_count == 2
-    assert update["docs"]["agentstate_ref"]["backend_id"] == "adapter-local"
+    assert update["docs"]["agentref_ref"]["backend_id"] == "adapter-local"
     assert adapter.hydrate_state_for_node(update) == {
         "docs": ["doc-a"],
         "blob": b"payload",
@@ -94,8 +94,8 @@ def test_langgraph_externalizes_node_update_and_hydrates_state() -> None:
     )
 
     assert update["step"] == "retrieve"
-    assert "agentstate_ref" in update["docs"]
-    assert "agentstate_ref" in update["blob"]
+    assert "agentref_ref" in update["docs"]
+    assert "agentref_ref" in update["blob"]
     assert backend.object_count == 2
     assert adapter.hydrate_state_for_node(LangGraphResearchState, update) == {
         "step": "retrieve",
@@ -117,7 +117,7 @@ def test_langgraph_checkpoint_bytes_exclude_externalized_payload() -> None:
     assert raw_blob in backend.get(state.to_checkpoint_dict()["blob"].hash)
 
 
-def test_langgraph_deserializes_checkpoint_to_agent_state() -> None:
+def test_langgraph_deserializes_checkpoint_to_agent_ref() -> None:
     adapter = LangGraphAdapter()
     state = LangGraphResearchState(step="retrieve", docs=["doc"], blob=b"payload")
 
@@ -134,7 +134,7 @@ def test_langgraph_deserializes_checkpoint_to_agent_state() -> None:
 def test_auto_adapt_returns_langgraph_schema_for_explicit_framework() -> None:
     schema = auto_adapt(LangGraphResearchState, Framework.LANGGRAPH)
 
-    assert getattr(schema, "__agentstate_origin__") is LangGraphResearchState
+    assert getattr(schema, "__agentref_origin__") is LangGraphResearchState
 
 
 def test_langgraph_serialize_accepts_checkpoint_mapping() -> None:

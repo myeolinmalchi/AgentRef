@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from agentstate.exceptions import AgentStateError
-from agentstate.storage.base import BaseCASBackend
+from agentref.exceptions import AgentRefError
+from agentref.storage.base import BaseCASBackend
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ def migrate_cas(
         payload = source.get(content_hash)
         migrated_hash = target.put(payload)
         if migrated_hash != content_hash:
-            raise AgentStateError(
+            raise AgentRefError(
                 "CAS migration changed a content hash from "
                 f"{content_hash!r} to {migrated_hash!r}."
             )

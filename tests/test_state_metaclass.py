@@ -1,20 +1,20 @@
-"""Tests for AgentStateMeta and AgentState behavior."""
+"""Tests for AgentRefStateMeta and AgentRefState behavior."""
 
 from __future__ import annotations
 
 import pytest
 
-from agentstate.config import AgentStateRuntime, configure
-from agentstate.core.descriptors import ExternalizedDescriptor, InlineDescriptor
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.exceptions import AgentStateError
-from agentstate.storage import InMemoryCAS
+from agentref.config import AgentRefRuntime, configure
+from agentref.core.descriptors import ExternalizedDescriptor, InlineDescriptor
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.exceptions import AgentRefError
+from agentref.storage import InMemoryCAS
 
 
 def test_metaclass_installs_descriptors_and_field_metadata() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
@@ -26,8 +26,8 @@ def test_metaclass_installs_descriptors_and_field_metadata() -> None:
     assert ResearchState.externalized_fields().keys() == {"docs"}
 
 
-def test_metaclass_preserves_inherited_agentstate_fields() -> None:
-    class BaseState(AgentState):
+def test_metaclass_preserves_inherited_agentref_fields() -> None:
+    class BaseState(AgentRefState):
         current_step: Inline[str]
 
     class ChildState(BaseState):
@@ -41,15 +41,15 @@ def test_metaclass_preserves_inherited_agentstate_fields() -> None:
 
 
 def test_constructor_rejects_unknown_fields() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
 
-    with pytest.raises(AgentStateError, match="Unknown field"):
+    with pytest.raises(AgentRefError, match="Unknown field"):
         ResearchState(step="retrieve", missing=True)
 
 
 def test_unassigned_field_access_raises_attribute_error() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
@@ -65,7 +65,7 @@ def test_checkpoint_round_trip_restores_inline_and_externalized_fields() -> None
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
@@ -82,7 +82,7 @@ def test_checkpoint_round_trip_accepts_content_ref_dicts() -> None:
     backend = InMemoryCAS()
     configure(backend=backend)
 
-    class BlobState(AgentState):
+    class BlobState(AgentRefState):
         blob: Externalized[bytes]
 
     original = BlobState(blob=b"payload")
@@ -94,11 +94,11 @@ def test_checkpoint_round_trip_accepts_content_ref_dicts() -> None:
     assert restored.blob == b"payload"
 
 
-def test_agent_state_can_use_instance_runtime_without_global_configure() -> None:
+def test_agent_ref_can_use_instance_runtime_without_global_configure() -> None:
     backend = InMemoryCAS("instance-local")
-    runtime = AgentStateRuntime(backend=backend)
+    runtime = AgentRefRuntime(backend=backend)
 
-    class BlobState(AgentState):
+    class BlobState(AgentRefState):
         blob: Externalized[bytes]
 
     state = BlobState(_runtime=runtime, blob=b"payload")
@@ -110,15 +110,15 @@ def test_agent_state_can_use_instance_runtime_without_global_configure() -> None
 
 
 def test_checkpoint_restore_rejects_invalid_externalized_value() -> None:
-    class BlobState(AgentState):
+    class BlobState(AgentRefState):
         blob: Externalized[bytes]
 
-    with pytest.raises(AgentStateError, match="ContentRef"):
+    with pytest.raises(AgentRefError, match="ContentRef"):
         BlobState.from_checkpoint_dict({"blob": b"not-a-ref"})
 
 
 def test_mapping_access_hydrates_and_assigns_declared_fields() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 
@@ -136,7 +136,7 @@ def test_mapping_access_hydrates_and_assigns_declared_fields() -> None:
 
 
 def test_framework_conversion_methods_are_checkpoint_safe_aliases() -> None:
-    class ResearchState(AgentState):
+    class ResearchState(AgentRefState):
         step: Inline[str]
         docs: Externalized[list[str]]
 

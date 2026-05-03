@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable
 
-from agentstate.storage.base import BaseCASBackend
+from agentref.storage.base import BaseCASBackend
 
 
 class InMemoryCAS(BaseCASBackend):

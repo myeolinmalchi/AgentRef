@@ -14,7 +14,7 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: What should AgentState add or change?
+      description: What should AgentRef add or change?
     validations:
       required: true
   - type: textarea

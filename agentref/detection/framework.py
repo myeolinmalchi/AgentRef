@@ -6,9 +6,9 @@ import sys
 from enum import Enum
 from typing import Any, Dict, Iterable, Optional, Set
 
-from agentstate.config import get_config
-from agentstate.exceptions import (
-    AgentStateError,
+from agentref.config import get_config
+from agentref.exceptions import (
+    AgentRefError,
     AmbiguousFrameworkError,
     NoFrameworkDetectedError,
 )
@@ -40,7 +40,7 @@ def detect_active_framework(explicit: Optional[Framework] = None) -> Framework:
         AmbiguousFrameworkError: If more than one supported framework appears
             imported.
         NoFrameworkDetectedError: If no supported framework appears imported.
-        AgentStateError: If an explicit or configured framework value is invalid.
+        AgentRefError: If an explicit or configured framework value is invalid.
     """
 
     if explicit is not None:
@@ -57,14 +57,14 @@ def detect_active_framework(explicit: Optional[Framework] = None) -> Framework:
         supported = ", ".join(framework.value for framework in Framework)
         raise NoFrameworkDetectedError(
             "No active framework detected. Import one supported framework "
-            f"({supported}) or call agentstate.configure(framework=...)."
+            f"({supported}) or call agentref.configure(framework=...)."
         )
 
     names = ", ".join(sorted(framework.value for framework in active))
     raise AmbiguousFrameworkError(
         "Multiple active frameworks detected: "
         f"{names}. Pass an explicit framework or call "
-        "agentstate.configure(framework=...)."
+        "agentref.configure(framework=...)."
     )
 
 
@@ -87,11 +87,11 @@ def _coerce_framework(value: Any) -> Framework:
         try:
             return aliases[normalized]
         except KeyError as exc:
-            raise AgentStateError(
+            raise AgentRefError(
                 f"Unknown framework {value!r}. Supported frameworks: "
                 f"{', '.join(framework.value for framework in Framework)}."
             ) from exc
-    raise AgentStateError(
+    raise AgentRefError(
         f"Framework must be a Framework enum or string, found {type(value).__name__}."
     )
 

@@ -1,4 +1,4 @@
-"""Real LlamaIndex Workflow compatibility checks for AgentState adapters."""
+"""Real LlamaIndex Workflow compatibility checks for AgentRefState adapters."""
 
 # mypy: disable-error-code="import-not-found,untyped-decorator,valid-type,attr-defined,no-any-return"
 
@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from agentstate import AgentState, Externalized, Inline, configure
-from agentstate.adapters.llamaindex import LlamaIndexAdapter
-from agentstate.storage import InMemoryCAS
+from agentref import AgentRefState, Externalized, Inline, configure
+from agentref.adapters.llamaindex import LlamaIndexAdapter
+from agentref.storage import InMemoryCAS
 
 
 RAW_PDF = b"%PDF-compat-llamaindex%" + (b"x" * 262_144)
@@ -19,8 +19,8 @@ RAW_DOCS = [{"id": "paper-1", "text": "paper text " * 2048}]
 RAW_NESTED = {"sections": [{"title": "intro", "body": RAW_NOTE}]}
 
 
-class LlamaIndexCompatState(AgentState):
-    """AgentState schema used with real LlamaIndex Workflow Context stores."""
+class LlamaIndexCompatState(AgentRefState):
+    """AgentRefState schema used with real LlamaIndex Workflow Context stores."""
 
     phase: Inline[str]
     iteration: Inline[int]
@@ -31,7 +31,7 @@ class LlamaIndexCompatState(AgentState):
     maybe: Externalized[Optional[str]]
 
 
-class LlamaIndexParallelState(AgentState):
+class LlamaIndexParallelState(AgentRefState):
     """State used for parallel workflow step compatibility."""
 
     phase: Inline[str]
@@ -39,7 +39,7 @@ class LlamaIndexParallelState(AgentState):
     branch_b: Externalized[str]
 
 
-class LlamaIndexHumanState(AgentState):
+class LlamaIndexHumanState(AgentRefState):
     """State used for human-in-the-loop workflow compatibility."""
 
     status: Inline[str]

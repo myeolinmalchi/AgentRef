@@ -1,4 +1,4 @@
-"""Real AutoGen message/state compatibility checks for AgentState adapters."""
+"""Real AutoGen message/state compatibility checks for AgentRefState adapters."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 
-from agentstate import AgentState, Externalized, Inline, configure
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.storage import InMemoryCAS
+from agentref import AgentRefState, Externalized, Inline, configure
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.storage import InMemoryCAS
 
 
 RAW_TOOL_RESULT = "autogen compatibility tool result " * 4096
 RAW_AGENT_CONTENT = "autogen compatibility assistant content " * 4096
 
 
-class AutoGenCompatState(AgentState):
-    """AgentState schema for explicit AutoGen state-dict integration."""
+class AutoGenCompatState(AgentRefState):
+    """AgentRefState schema for explicit AutoGen state-dict integration."""
 
     phase: Inline[str]
     tool_result: Externalized[str]

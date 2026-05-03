@@ -5,15 +5,15 @@ from __future__ import annotations
 import pickle
 from typing import Any, Dict
 
-from agentstate.adapters.llamaindex import LlamaIndexAdapter, LlamaIndexStateSpec
-from agentstate.config import configure
-from agentstate.core.reference import ContentRef
-from agentstate.core.state import AgentState
-from agentstate.core.types import Externalized, Inline
-from agentstate.storage import InMemoryCAS
+from agentref.adapters.llamaindex import LlamaIndexAdapter, LlamaIndexStateSpec
+from agentref.config import configure
+from agentref.core.reference import ContentRef
+from agentref.core.state import AgentRefState
+from agentref.core.types import Externalized, Inline
+from agentref.storage import InMemoryCAS
 
 
-class LlamaIndexResearchState(AgentState):
+class LlamaIndexResearchState(AgentRefState):
     """State class used by LlamaIndex adapter tests."""
 
     step: Inline[str]
@@ -73,7 +73,7 @@ def test_llamaindex_checkpoint_bytes_exclude_externalized_payload() -> None:
     assert raw_docs[0].encode() in backend.get(state.to_checkpoint_dict()["docs"].hash)
 
 
-def test_llamaindex_deserializes_checkpoint_to_agent_state() -> None:
+def test_llamaindex_deserializes_checkpoint_to_agent_ref() -> None:
     adapter = LlamaIndexAdapter()
     state = LlamaIndexResearchState(step="retrieve", docs=["doc-a"])
 

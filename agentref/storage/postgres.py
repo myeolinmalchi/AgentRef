@@ -7,8 +7,8 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Iterator, Optional, Sequence
 
-from agentstate.exceptions import AgentStateError
-from agentstate.storage.base import BaseCASBackend
+from agentref.exceptions import AgentRefError
+from agentref.storage.base import BaseCASBackend
 
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -21,8 +21,8 @@ class PostgresCAS(BaseCASBackend):
         dsn: Optional[str] = None,
         *,
         connection: Optional[Any] = None,
-        table_name: str = "agentstate_cas_objects",
-        backend_id: str = "postgres:agentstate",
+        table_name: str = "agentref_cas_objects",
+        backend_id: str = "postgres:agentref",
         backend_aliases: Optional[Iterable[str]] = None,
         default_ttl_seconds: Optional[int] = None,
         update_last_accessed: bool = False,
@@ -46,9 +46,9 @@ class PostgresCAS(BaseCASBackend):
         """
 
         if connection is None and not dsn:
-            raise AgentStateError("PostgresCAS requires either dsn or connection.")
+            raise AgentRefError("PostgresCAS requires either dsn or connection.")
         if default_ttl_seconds is not None and default_ttl_seconds <= 0:
-            raise AgentStateError("default_ttl_seconds must be positive.")
+            raise AgentRefError("default_ttl_seconds must be positive.")
 
         self._connection = connection or self._connect(dsn)
         self._owns_connection = connection is None
@@ -167,7 +167,7 @@ class PostgresCAS(BaseCASBackend):
         """Delete expired objects and return the database row count."""
 
         if limit is not None and limit <= 0:
-            raise AgentStateError("limit must be positive.")
+            raise AgentRefError("limit must be positive.")
 
         if limit is None:
             cursor = self._execute(
@@ -236,7 +236,7 @@ class PostgresCAS(BaseCASBackend):
         self._execute(
             f"""
             CREATE INDEX IF NOT EXISTS
-                agentstate_cas_objects_expires_at_idx
+                agentref_cas_objects_expires_at_idx
             ON {self._table_sql} (expires_at)
             """
         )
@@ -273,7 +273,7 @@ class PostgresCAS(BaseCASBackend):
         except ModuleNotFoundError as exc:
             raise ImportError(
                 "PostgresCAS requires psycopg. Install with "
-                "`pip install 'agentstate[postgres]'`."
+                "`pip install 'agentref[postgres]'`."
             ) from exc
         return psycopg.connect(dsn)
 
@@ -283,5 +283,5 @@ def _quote_qualified_name(name: str) -> str:
 
     parts = name.split(".")
     if not parts or any(not _IDENTIFIER_RE.match(part) for part in parts):
-        raise AgentStateError(f"Invalid PostgreSQL table name: {name!r}.")
+        raise AgentRefError(f"Invalid PostgreSQL table name: {name!r}.")
     return ".".join(f'"{part}"' for part in parts)

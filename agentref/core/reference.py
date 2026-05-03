@@ -7,10 +7,10 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, cast
 
-from agentstate.exceptions import SerializationError, UnresolvedReferenceError
+from agentref.exceptions import SerializationError, UnresolvedReferenceError
 
 if TYPE_CHECKING:
-    from agentstate.storage.base import BaseCASBackend
+    from agentref.storage.base import BaseCASBackend
 
 
 @dataclass(frozen=True)
@@ -60,7 +60,7 @@ class ContentRef:
 
         Args:
             backend: Storage backend to read from. If omitted, this method tries
-                to use ``agentstate.config.get_config().backend`` when that
+                to use ``agentref.config.get_config().backend`` when that
                 module exists in later phases.
 
         Raises:
@@ -195,7 +195,7 @@ class ContentRef:
         """Return the globally configured backend when available."""
 
         try:
-            from agentstate.config import get_config
+            from agentref.config import get_config
         except (ImportError, ModuleNotFoundError):
             return None
 

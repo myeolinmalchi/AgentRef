@@ -1,4 +1,4 @@
-"""End-to-end workflow scenarios for agentstate integration."""
+"""End-to-end workflow scenarios for agentref integration."""
 
 from __future__ import annotations
 
@@ -6,17 +6,17 @@ import pickle
 from pathlib import Path
 from typing import Any, Dict, List
 
-import agentstate
-from agentstate import AgentState, Externalized, Framework, Inline
-from agentstate.adapters.autogen import AutoGenAdapter
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.adapters.llamaindex import LlamaIndexAdapter
-from agentstate.core.invariants import validate_checkpoint_state
-from agentstate.core.reference import ContentRef
-from agentstate.storage import FilesystemCAS, InMemoryCAS
+import agentref
+from agentref import AgentRefState, Externalized, Framework, Inline
+from agentref.adapters.autogen import AutoGenAdapter
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.adapters.llamaindex import LlamaIndexAdapter
+from agentref.core.invariants import validate_checkpoint_state
+from agentref.core.reference import ContentRef
+from agentref.storage import FilesystemCAS, InMemoryCAS
 
 
-class E2EResearchState(AgentState):
+class E2EResearchState(AgentRefState):
     """State used across E2E workflow scenarios."""
 
     current_step: Inline[str]
@@ -27,9 +27,9 @@ class E2EResearchState(AgentState):
 
 def test_public_api_exports_only_documented_symbols() -> None:
     expected = {
-        "AgentState",
-        "AgentStateRuntime",
-        "AgentStateError",
+        "AgentRefState",
+        "AgentRefRuntime",
+        "AgentRefError",
         "AmbiguousFrameworkError",
         "ContentRef",
         "Externalized",
@@ -45,14 +45,14 @@ def test_public_api_exports_only_documented_symbols() -> None:
         "get_config",
     }
 
-    assert set(agentstate.__all__) == expected
+    assert set(agentref.__all__) == expected
     for name in expected:
-        assert hasattr(agentstate, name)
+        assert hasattr(agentref, name)
 
 
 def test_langgraph_like_rag_workflow_keeps_payloads_out_of_checkpoints() -> None:
     backend = InMemoryCAS()
-    agentstate.configure(backend=backend)
+    agentref.configure(backend=backend)
     adapter = LangGraphAdapter()
     raw_docs = [
         {"id": "doc-1", "text": "large retrieved document payload " * 16},
@@ -120,7 +120,7 @@ def test_langgraph_like_rag_workflow_keeps_payloads_out_of_checkpoints() -> None
 
 def test_llamaindex_like_context_workflow_round_trips_store_state() -> None:
     backend = InMemoryCAS()
-    agentstate.configure(backend=backend)
+    agentref.configure(backend=backend)
     adapter = LlamaIndexAdapter()
     context_store: Dict[str, Any] = {}
     store = adapter.context_store(E2EResearchState, context_store)
@@ -144,7 +144,7 @@ def test_llamaindex_like_context_workflow_round_trips_store_state() -> None:
 
 def test_autogen_like_multi_agent_history_externalizes_tool_results() -> None:
     backend = InMemoryCAS()
-    agentstate.configure(backend=backend)
+    agentref.configure(backend=backend)
     adapter = AutoGenAdapter()
     tool_result = "autogen multi-agent tool result " * 24
     messages = [
@@ -169,7 +169,7 @@ def test_filesystem_e2e_preserves_time_travel_across_backend_instances(
 ) -> None:
     root = tmp_path / "state_blobs"
     first_backend = FilesystemCAS(root=root, backend_id="shared-fs")
-    agentstate.configure(backend=first_backend)
+    agentref.configure(backend=first_backend)
     adapter = LangGraphAdapter()
     docs = [{"id": "doc", "text": "filesystem-backed document payload"}]
     state = E2EResearchState(
@@ -181,7 +181,7 @@ def test_filesystem_e2e_preserves_time_travel_across_backend_instances(
     checkpoint_bytes = adapter.serialize_for_checkpoint(state)
 
     second_backend = FilesystemCAS(root=root, backend_id="shared-fs")
-    agentstate.configure(backend=second_backend)
+    agentref.configure(backend=second_backend)
     restored = adapter.deserialize_from_checkpoint(
         checkpoint_bytes,
         E2EResearchState,

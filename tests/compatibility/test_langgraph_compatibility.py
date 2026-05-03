@@ -1,4 +1,4 @@
-"""Real LangGraph compatibility checks for AgentState adapters."""
+"""Real LangGraph compatibility checks for AgentRefState adapters."""
 
 import asyncio
 import os
@@ -10,10 +10,10 @@ from typing import Annotated, Any, Dict, Iterator, List, Optional, TypedDict, ca
 
 import pytest
 
-from agentstate import AgentState, Externalized, Inline, configure
-from agentstate.adapters.langgraph import LangGraphAdapter
-from agentstate.core.reducers import ref_aware_list_append
-from agentstate.storage import InMemoryCAS
+from agentref import AgentRefState, Externalized, Inline, configure
+from agentref.adapters.langgraph import LangGraphAdapter
+from agentref.core.reducers import ref_aware_list_append
+from agentref.storage import InMemoryCAS
 
 
 RAW_BYTES = b"langgraph-compat-raw-bytes-" * 4096
@@ -21,8 +21,8 @@ RAW_TEXT = "langgraph compat retrieved document " * 2048
 RAW_NESTED = {"outer": {"inner": ["nested", RAW_TEXT]}}
 
 
-class LangGraphCompatState(AgentState):
-    """AgentState schema used by real LangGraph compatibility tests."""
+class LangGraphCompatState(AgentRefState):
+    """AgentRefState schema used by real LangGraph compatibility tests."""
 
     phase: Inline[str]
     count: Inline[int]
@@ -31,13 +31,13 @@ class LangGraphCompatState(AgentState):
     nested: Externalized[Dict[str, Any]]
 
 
-class SinglePayloadState(AgentState):
+class SinglePayloadState(AgentRefState):
     """Small helper state for graph pattern tests."""
 
     payload: Externalized[str]
 
 
-class BranchCycleState(AgentState):
+class BranchCycleState(AgentRefState):
     """State used for branch, cycle, and async node compatibility."""
 
     route: Inline[str]
@@ -301,8 +301,8 @@ def test_langgraph_dataclass_pydantic_and_subgraph_patterns_accept_wrappers() ->
 def test_langgraph_hydrates_very_large_payload_when_enabled() -> None:
     """Optional 100MB edge-case check; disabled unless explicitly requested."""
 
-    if os.environ.get("AGENTSTATE_RUN_HEAVY_COMPAT") != "1":
-        pytest.skip("set AGENTSTATE_RUN_HEAVY_COMPAT=1 to run 100MB compatibility case")
+    if os.environ.get("AGENTREF_RUN_HEAVY_COMPAT") != "1":
+        pytest.skip("set AGENTREF_RUN_HEAVY_COMPAT=1 to run 100MB compatibility case")
 
     graph_mod = pytest.importorskip("langgraph.graph")
     adapter = LangGraphAdapter()
