@@ -23,6 +23,12 @@ def type_name_for(annotation: Any, value: Optional[Any] = None) -> str:
     return getattr(source, "__name__", str(source))
 
 
+def runtime_for(instance: Any) -> Any:
+    """Return the runtime attached to ``instance`` or the global fallback."""
+
+    return getattr(instance, "_agentstate_runtime", None) or get_config()
+
+
 class InlineDescriptor:
     """Descriptor for ``Inline[T]`` fields.
 
@@ -51,14 +57,14 @@ class InlineDescriptor:
     def __set__(self, instance: Any, value: Any) -> None:
         """Validate and store an inline value."""
 
-        config = get_config()
-        payload = config.backend.serialize(value)
+        runtime = runtime_for(instance)
+        payload = runtime.backend.serialize(value)
         size_bytes = len(payload)
-        if size_bytes > config.inline_threshold_bytes:
+        if size_bytes > runtime.inline_threshold_bytes:
             raise InlineSizeExceeded(
                 f"Inline field {self.name!r} serialized to {size_bytes} bytes, "
                 f"exceeding the configured limit of "
-                f"{config.inline_threshold_bytes} bytes. Declare this field as "
+                f"{runtime.inline_threshold_bytes} bytes. Declare this field as "
                 "Externalized[...] or reduce the value size."
             )
         instance._data[self.name] = value
@@ -84,7 +90,7 @@ class ExternalizedDescriptor:
             return self
 
         ref = self.get_ref(instance)
-        return ref.resolve(get_config().backend)
+        return ref.resolve(runtime_for(instance).backend)
 
     def __set__(self, instance: Any, value: Any) -> None:
         """Store ``value`` in CAS and retain only its ``ContentRef``."""
@@ -93,12 +99,12 @@ class ExternalizedDescriptor:
             instance._data[self.name] = value
             return
 
-        config = get_config()
-        payload = config.backend.serialize(value)
-        content_hash = config.backend.put(payload)
+        runtime = runtime_for(instance)
+        payload = runtime.backend.serialize(value)
+        content_hash = runtime.backend.put(payload)
         instance._data[self.name] = ContentRef(
             hash=content_hash,
-            backend_id=config.backend.backend_id,
+            backend_id=runtime.backend.backend_id,
             type_name=type_name_for(self.inner_type, value),
             size_bytes=len(payload),
         )

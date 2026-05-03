@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
-from typing import Union
+from typing import Iterator, Union
 
 from agentstate.storage.base import BaseCASBackend
 
@@ -86,6 +86,16 @@ class FilesystemCAS(BaseCASBackend):
             self._path_for_hash(hash).unlink()
         except FileNotFoundError:
             return
+
+    def iter_hashes(self) -> Iterator[str]:
+        """Yield content hashes currently present in storage."""
+
+        for shard in sorted(self.root.iterdir()):
+            if not shard.is_dir() or len(shard.name) != 2:
+                continue
+            for path in sorted(shard.iterdir()):
+                if path.is_file() and not path.name.startswith("."):
+                    yield f"{shard.name}{path.name}"
 
     def path_for_hash(self, hash: str) -> Path:
         """Return the object path for ``hash``."""

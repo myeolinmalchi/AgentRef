@@ -28,6 +28,7 @@ class E2EResearchState(AgentState):
 def test_public_api_exports_only_documented_symbols() -> None:
     expected = {
         "AgentState",
+        "AgentStateRuntime",
         "AgentStateError",
         "AmbiguousFrameworkError",
         "ContentRef",
@@ -39,6 +40,7 @@ def test_public_api_exports_only_documented_symbols() -> None:
         "UnresolvedReferenceError",
         "auto_adapt",
         "configure",
+        "create_runtime",
         "detect_active_framework",
         "get_config",
     }

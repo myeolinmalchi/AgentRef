@@ -1,7 +1,7 @@
 """Public API for agentstate."""
 
 from agentstate.adapters import auto_adapt
-from agentstate.config import configure, get_config
+from agentstate.config import AgentStateRuntime, configure, create_runtime, get_config
 from agentstate.core.reference import ContentRef
 from agentstate.core.state import AgentState
 from agentstate.core.types import Externalized, Inline
@@ -16,6 +16,7 @@ from agentstate.exceptions import (
 
 __all__ = [
     "AgentState",
+    "AgentStateRuntime",
     "AgentStateError",
     "AmbiguousFrameworkError",
     "ContentRef",
@@ -27,6 +28,7 @@ __all__ = [
     "UnresolvedReferenceError",
     "auto_adapt",
     "configure",
+    "create_runtime",
     "detect_active_framework",
     "get_config",
 ]

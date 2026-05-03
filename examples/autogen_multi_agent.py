@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from agentstate import configure
 from agentstate.adapters.autogen import AutoGenAdapter
 from agentstate.storage import FilesystemCAS
 
@@ -24,10 +23,9 @@ def worker_tool_message() -> Dict[str, str]:
     }
 
 
-def run_conversation() -> List[Dict[str, Any]]:
+def run_conversation(adapter: AutoGenAdapter) -> List[Dict[str, Any]]:
     """Run a small multi-agent conversation history through AgentState."""
 
-    adapter = AutoGenAdapter()
     messages = [planner_message("research"), worker_tool_message()]
     checkpoint_messages = adapter.externalize_message_history(
         messages,
@@ -37,10 +35,10 @@ def run_conversation() -> List[Dict[str, Any]]:
 
 
 def main() -> None:
-    """Configure storage and run the example conversation."""
+    """Run the example conversation."""
 
-    configure(backend=FilesystemCAS(root="./state_blobs"))
-    hydrated = run_conversation()
+    adapter = AutoGenAdapter(backend=FilesystemCAS(root="./state_blobs"))
+    hydrated = run_conversation(adapter)
     print(hydrated[-1]["tool_result"][:32])
 
 

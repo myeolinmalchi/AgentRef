@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentstate.config import configure
+from agentstate.config import AgentStateRuntime, configure
 from agentstate.core.descriptors import ExternalizedDescriptor, InlineDescriptor
 from agentstate.core.reference import ContentRef
 from agentstate.core.state import AgentState
@@ -92,6 +92,21 @@ def test_checkpoint_round_trip_accepts_content_ref_dicts() -> None:
     restored = BlobState.from_checkpoint_dict({"blob": ref.to_dict()})
 
     assert restored.blob == b"payload"
+
+
+def test_agent_state_can_use_instance_runtime_without_global_configure() -> None:
+    backend = InMemoryCAS("instance-local")
+    runtime = AgentStateRuntime(backend=backend)
+
+    class BlobState(AgentState):
+        blob: Externalized[bytes]
+
+    state = BlobState(_runtime=runtime, blob=b"payload")
+    ref = state.to_checkpoint_dict()["blob"]
+
+    assert isinstance(ref, ContentRef)
+    assert ref.backend_id == "instance-local"
+    assert state.blob == b"payload"
 
 
 def test_checkpoint_restore_rejects_invalid_externalized_value() -> None:

@@ -1,4 +1,4 @@
-"""Global configuration for agentstate."""
+"""Runtime configuration for agentstate."""
 
 from __future__ import annotations
 
@@ -14,15 +14,43 @@ DEFAULT_INLINE_THRESHOLD_BYTES = 64 * 1024
 
 
 @dataclass(frozen=True)
-class AgentStateConfig:
-    """Runtime configuration shared by descriptors and adapters."""
+class AgentStateRuntime:
+    """Runtime configuration for one AgentState workflow or adapter."""
 
     backend: BaseCASBackend
     inline_threshold_bytes: int = DEFAULT_INLINE_THRESHOLD_BYTES
     framework: Optional[Any] = None
 
 
-_CONFIG = AgentStateConfig(backend=InMemoryCAS())
+AgentStateConfig = AgentStateRuntime
+
+
+_CONFIG = AgentStateRuntime(backend=InMemoryCAS())
+
+
+def create_runtime(
+    *,
+    runtime: Optional[AgentStateRuntime] = None,
+    backend: Optional[BaseCASBackend] = None,
+    inline_threshold_bytes: Optional[int] = None,
+    framework: Optional[Any] = None,
+) -> AgentStateRuntime:
+    """Return a runtime using explicit values over ``runtime`` or global config."""
+
+    base = runtime or _CONFIG
+    next_threshold = (
+        base.inline_threshold_bytes
+        if inline_threshold_bytes is None
+        else inline_threshold_bytes
+    )
+    if next_threshold <= 0:
+        raise AgentStateError("inline_threshold_bytes must be a positive integer.")
+
+    return AgentStateRuntime(
+        backend=backend or base.backend,
+        inline_threshold_bytes=next_threshold,
+        framework=base.framework if framework is None else framework,
+    )
 
 
 def configure(
@@ -31,7 +59,7 @@ def configure(
     inline_threshold_bytes: Optional[int] = None,
     framework: Optional[Any] = None,
 ) -> AgentStateConfig:
-    """Update and return the global agentstate configuration.
+    """Update and return the global fallback runtime.
 
     Args:
         backend: Content-addressed storage backend for externalized values.
@@ -45,24 +73,17 @@ def configure(
 
     global _CONFIG
 
-    next_threshold = (
-        _CONFIG.inline_threshold_bytes
-        if inline_threshold_bytes is None
-        else inline_threshold_bytes
-    )
-    if next_threshold <= 0:
-        raise AgentStateError("inline_threshold_bytes must be a positive integer.")
-
-    _CONFIG = AgentStateConfig(
-        backend=backend or _CONFIG.backend,
-        inline_threshold_bytes=next_threshold,
-        framework=_CONFIG.framework if framework is None else framework,
+    _CONFIG = create_runtime(
+        runtime=_CONFIG,
+        backend=backend,
+        inline_threshold_bytes=inline_threshold_bytes,
+        framework=framework,
     )
     return _CONFIG
 
 
 def get_config() -> AgentStateConfig:
-    """Return the current global agentstate configuration."""
+    """Return the current global fallback runtime."""
 
     return _CONFIG
 
@@ -72,5 +93,5 @@ def _reset_config_for_tests() -> AgentStateConfig:
 
     global _CONFIG
 
-    _CONFIG = AgentStateConfig(backend=InMemoryCAS())
+    _CONFIG = AgentStateRuntime(backend=InMemoryCAS())
     return _CONFIG

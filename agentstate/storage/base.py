@@ -6,7 +6,7 @@ import hashlib
 import importlib
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any, Iterable, cast
 
 from agentstate.exceptions import SerializationError
 
@@ -42,6 +42,18 @@ class BaseCASBackend(ABC):
     @abstractmethod
     def delete(self, hash: str) -> None:
         """Delete ``hash`` from storage if present."""
+
+    def can_resolve(self, backend_id: str) -> bool:
+        """Return whether this backend can resolve refs for ``backend_id``."""
+
+        return backend_id == self.backend_id
+
+    def iter_hashes(self) -> Iterable[str]:
+        """Iterate stored content hashes when supported by the backend."""
+
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support hash iteration."
+        )
 
     @staticmethod
     def hash_bytes(data: bytes) -> str:

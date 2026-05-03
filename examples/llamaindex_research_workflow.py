@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from agentstate import AgentState, Externalized, Inline, configure
+from agentstate import AgentState, Externalized, Inline
 from agentstate.adapters.llamaindex import LlamaIndexAdapter
 from agentstate.storage import FilesystemCAS
 
@@ -17,10 +17,7 @@ class ResearchWorkflowState(AgentState):
     summary: Inline[str]
 
 
-adapter = LlamaIndexAdapter(ResearchWorkflowState)
-
-
-async def retrieve_step(ctx: Any) -> None:
+async def retrieve_step(ctx: Any, adapter: LlamaIndexAdapter) -> None:
     """Store retrieved documents through a Context.store proxy."""
 
     store = adapter.context_store(ctx.store)
@@ -28,7 +25,7 @@ async def retrieve_step(ctx: Any) -> None:
     store["docs"] = [{"id": "doc-1", "text": "large research document"}]
 
 
-async def summarize_step(ctx: Any) -> None:
+async def summarize_step(ctx: Any, adapter: LlamaIndexAdapter) -> None:
     """Hydrate retrieved documents and write a small summary."""
 
     store = adapter.context_store(ctx.store)
@@ -49,10 +46,13 @@ class DictContext:
 async def main() -> None:
     """Run the workflow steps with a dict-backed Context stand-in."""
 
-    configure(backend=FilesystemCAS(root="./state_blobs"))
+    adapter = LlamaIndexAdapter(
+        ResearchWorkflowState,
+        backend=FilesystemCAS(root="./state_blobs"),
+    )
     ctx = DictContext()
-    await retrieve_step(ctx)
-    await summarize_step(ctx)
+    await retrieve_step(ctx, adapter)
+    await summarize_step(ctx, adapter)
     checkpoint = adapter.context_store(ctx.store).to_checkpoint_dict()
     print(checkpoint["current_step"])
 

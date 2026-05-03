@@ -8,11 +8,12 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableMapping
 from typing import Any, Dict, Iterator, Mapping, Optional, Type, TypeVar
 
-from agentstate.config import get_config
+from agentstate.config import AgentStateRuntime, create_runtime, get_config
 from agentstate.core.invariants import validate_checkpoint_state
 from agentstate.core.reducers import ref_aware_replace
 from agentstate.core.reference import ContentRef
 from agentstate.core.state import AgentState, StateField
+from agentstate.storage.base import BaseCASBackend
 
 StateT = TypeVar("StateT", bound=AgentState)
 
@@ -20,7 +21,14 @@ StateT = TypeVar("StateT", bound=AgentState)
 class BaseFrameworkAdapter(ABC):
     """Common interface for framework-specific adapters."""
 
-    def __init__(self, state_cls: Optional[Type[AgentState]] = None) -> None:
+    def __init__(
+        self,
+        state_cls: Optional[Type[AgentState]] = None,
+        *,
+        runtime: Optional[AgentStateRuntime] = None,
+        backend: Optional[BaseCASBackend] = None,
+        inline_threshold_bytes: Optional[int] = None,
+    ) -> None:
         """Create an adapter optionally bound to one ``AgentState`` class."""
 
         if state_cls is not None and (
@@ -31,12 +39,33 @@ class BaseFrameworkAdapter(ABC):
                 f"{type(state_cls).__name__}."
             )
         self._state_cls = state_cls
+        self._runtime = (
+            None
+            if runtime is None and backend is None and inline_threshold_bytes is None
+            else create_runtime(
+                runtime=runtime,
+                backend=backend,
+                inline_threshold_bytes=inline_threshold_bytes,
+            )
+        )
 
     @property
     def state_cls(self) -> Optional[Type[AgentState]]:
         """Return the state class bound to this adapter, if any."""
 
         return self._state_cls
+
+    @property
+    def runtime(self) -> AgentStateRuntime:
+        """Return this adapter's explicit runtime."""
+
+        return self._runtime or get_config()
+
+    @property
+    def backend(self) -> BaseCASBackend:
+        """Return this adapter's storage backend."""
+
+        return self.runtime.backend
 
     def _require_state_cls(
         self,
@@ -148,7 +177,7 @@ class BaseFrameworkAdapter(ABC):
             value = result[name]
             ref = self._to_content_ref_if_reference_like(value)
             if ref is not None:
-                result[name] = ref.resolve(get_config().backend)
+                result[name] = ref.resolve(self.backend)
         return result
 
     def checkpoint_dict_from_state(self, state_instance: Any) -> Dict[str, Any]:
@@ -171,7 +200,7 @@ class BaseFrameworkAdapter(ABC):
         """Serialize state after validating it against ``state_cls``."""
 
         checkpoint = self.checkpoint_dict_from_state(state_instance)
-        validate_checkpoint_state(state_cls, checkpoint)
+        validate_checkpoint_state(state_cls, checkpoint, backend=self.backend)
         return pickle.dumps(checkpoint, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _deserialize_state_for_class(
@@ -183,7 +212,8 @@ class BaseFrameworkAdapter(ABC):
         if not isinstance(loaded, Mapping):
             raise TypeError("Checkpoint payload must deserialize to a mapping.")
         return state_cls.from_checkpoint_dict(
-            self._normalize_reference_wrappers(state_cls, loaded)
+            self._normalize_reference_wrappers(state_cls, loaded),
+            runtime=self._runtime,
         )
 
     def _to_content_ref(self, value: Any) -> ContentRef:
@@ -192,12 +222,11 @@ class BaseFrameworkAdapter(ABC):
         if isinstance(value, ContentRef):
             return value
 
-        config = get_config()
-        payload = config.backend.serialize(value)
-        content_hash = config.backend.put(payload)
+        payload = self.backend.serialize(value)
+        content_hash = self.backend.put(payload)
         return ContentRef(
             hash=content_hash,
-            backend_id=config.backend.backend_id,
+            backend_id=self.backend.backend_id,
             type_name=type(value).__name__,
             size_bytes=len(payload),
         )
@@ -269,7 +298,7 @@ class MappingStoreProxy(MutableMapping[str, Any]):
         if field is not None and field.kind == "externalized":
             ref = self._adapter._to_content_ref_if_reference_like(value)
             if ref is not None:
-                return ref.resolve(get_config().backend)
+                return ref.resolve(self._adapter.backend)
         return value
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -327,7 +356,7 @@ class AsyncContextStoreProxy:
         if field is not None and field.kind == "externalized":
             ref = self._adapter._to_content_ref_if_reference_like(value)
             if ref is not None:
-                return ref.resolve(get_config().backend)
+                return ref.resolve(self._adapter.backend)
         return value
 
     async def set(self, key: str, value: Any) -> None:

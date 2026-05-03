@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from agentstate import AgentState, Externalized, Inline, configure
+from agentstate import AgentState, Externalized, Inline
 from agentstate.adapters.langgraph import LangGraphAdapter
 from agentstate.storage import FilesystemCAS
 
@@ -15,9 +15,6 @@ class RAGState(AgentState):
     question: Inline[str]
     docs: Externalized[List[Dict[str, str]]]
     answer: Inline[str]
-
-
-adapter = LangGraphAdapter(RAGState)
 
 
 def retrieve_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -39,7 +36,7 @@ def answer_node(state: Dict[str, Any]) -> Dict[str, Any]:
     return {"answer": f"Used {len(docs)} retrieved document(s)."}
 
 
-def build_graph() -> Any:
+def build_graph(adapter: LangGraphAdapter) -> Any:
     """Build and return a LangGraph StateGraph.
 
     This function imports LangGraph lazily so the example module can be imported
@@ -58,10 +55,10 @@ def build_graph() -> Any:
 
 
 def main() -> None:
-    """Configure storage and run the graph when LangGraph is installed."""
+    """Run the graph when LangGraph is installed."""
 
-    configure(backend=FilesystemCAS(root="./state_blobs"))
-    graph = build_graph().compile()
+    adapter = LangGraphAdapter(RAGState, backend=FilesystemCAS(root="./state_blobs"))
+    graph = build_graph(adapter).compile()
     result = graph.invoke({"question": "How does AgentState avoid bloat?"})
     print(result["answer"])
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Iterable
 
 from agentstate.storage.base import BaseCASBackend
 
@@ -47,6 +47,11 @@ class InMemoryCAS(BaseCASBackend):
         """Delete ``hash`` from storage if present."""
 
         self._store.pop(hash, None)
+
+    def iter_hashes(self) -> Iterable[str]:
+        """Return stored content hashes."""
+
+        return tuple(self._store)
 
     @property
     def object_count(self) -> int:
