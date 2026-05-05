@@ -41,18 +41,40 @@ RSS values across machines.
 
 ## Install
 
+The PyPI distribution is `agent-checkpoint-cas`; the Python import package stays
+`agentref`.
+
+With pip:
+
 ```bash
-pip install agentref
+pip install agent-checkpoint-cas
 ```
 
 Optional framework integrations are split by extra:
 
 ```bash
-pip install "agentref[langgraph]"
-pip install "agentref[llamaindex]"
-pip install "agentref[autogen]"
-pip install "agentref[postgres]"
-pip install "agentref[all]"
+pip install "agent-checkpoint-cas[langgraph]"
+pip install "agent-checkpoint-cas[llamaindex]"
+pip install "agent-checkpoint-cas[autogen]"
+pip install "agent-checkpoint-cas[postgres]"
+pip install "agent-checkpoint-cas[all]"
+```
+
+With uv in a project:
+
+```bash
+uv add agent-checkpoint-cas
+uv add "agent-checkpoint-cas[langgraph]"
+uv add "agent-checkpoint-cas[llamaindex]"
+uv add "agent-checkpoint-cas[autogen]"
+uv add "agent-checkpoint-cas[postgres]"
+uv add "agent-checkpoint-cas[all]"
+```
+
+With uv in the current environment:
+
+```bash
+uv pip install agent-checkpoint-cas
 ```
 
 ## Usage

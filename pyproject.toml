@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentref"
+name = "agent-checkpoint-cas"
 version = "0.1.0"
 description = "Type-guided externalized state for LLM agent frameworks."
 readme = "README.md"
