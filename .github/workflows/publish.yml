@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  PYPI_PROJECT_NAME: agent-ref
+  PYPI_PROJECT_NAME: agent-checkpoint-cas
 
 permissions:
   contents: read
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/agent-ref/
+      url: https://pypi.org/project/agent-checkpoint-cas/
     permissions:
       id-token: write
 
